@@ -1550,8 +1550,9 @@
           lessonText ? "مقتطف الدرس: " + lessonText : "لا يوجد نص درس مرفق."
         ].join("\n");
         const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-        const timer = controller ? window.setTimeout(() => controller.abort(), 28000) : null;
+        const timer = controller ? window.setTimeout(() => controller.abort(), 15000) : null;
         try {
+          if (navigator.onLine === false) throw new Error("الجهاز غير متصل بالإنترنت.");
           const proxyUrl = String(aiSettings.proxyUrl || "").trim();
           if (proxyUrl) {
             const response = await fetch(proxyUrl, {
