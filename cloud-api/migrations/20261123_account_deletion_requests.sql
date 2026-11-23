@@ -20,7 +20,7 @@ CREATE INDEX IF NOT EXISTS account_deletion_requests_ip_date_idx ON public.accou
 DO $grant$
 BEGIN
  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='alnoor_school_api') THEN
-  GRANT SELECT, INSERT, UPDATE ON public.account_deletion_requests TO alnoor_school_api;
+  GRANT SELECT, INSERT, UPDATE, DELETE ON public.account_deletion_requests TO alnoor_school_api;
  END IF;
 END
 $grant$;

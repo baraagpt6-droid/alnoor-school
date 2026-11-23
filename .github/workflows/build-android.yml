@@ -142,7 +142,7 @@ jobs:
           AAB_TARGET="$(java -jar "$BUNDLETOOL" dump manifest --bundle="$AAB" --module=base --xpath='/manifest/uses-sdk/@android:targetSdkVersion')"
           test "$AAB_TARGET" = "36"
 
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "package: name='com.alnoor.school' versionCode='203' versionName='2.0.4'"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "package: name='com.alnoor.school' versionCode='204' versionName='2.0.4'"
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "targetSdkVersion:'36'"
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" | tee "$RUNNER_TEMP/apk-signature.txt"
           APK_CERT="$(awk '/Signer #1 certificate SHA-256 digest:/ {print tolower($NF); exit}' "$RUNNER_TEMP/apk-signature.txt")"
