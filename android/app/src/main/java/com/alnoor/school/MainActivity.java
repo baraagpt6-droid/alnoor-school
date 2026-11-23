@@ -27,11 +27,11 @@ public class MainActivity extends Activity {
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getWindow().setStatusBarColor(Color.rgb(34,27,18));
-        getWindow().setNavigationBarColor(Color.rgb(34,27,18));
+        getWindow().setStatusBarColor(Color.rgb(28,25,20));
+        getWindow().setNavigationBarColor(Color.rgb(28,25,20));
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         FrameLayout root = new FrameLayout(this);
-        root.setBackgroundColor(Color.rgb(34,27,18));
+        root.setBackgroundColor(Color.rgb(28,25,20));
         webView = new WebView(this);
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -49,6 +49,8 @@ public class MainActivity extends Activity {
         webView.setWebViewClient(new WebViewClient() {
             @Override public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
+                // Remove the HTML splash behind the native overlay to avoid a second loading screen.
+                view.evaluateJavascript("document.getElementById('instant-splash')?.remove();", null);
                 hideSplashWhenReady(view);
             }
         });
@@ -86,28 +88,37 @@ public class MainActivity extends Activity {
     private View buildSplash() {
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setGravity(Gravity.CENTER);
+        layout.setGravity(Gravity.CENTER_HORIZONTAL | Gravity.CENTER_VERTICAL);
         layout.setPadding(dp(24), dp(24), dp(24), dp(24));
+        layout.setBaselineAligned(false);
         GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                new int[]{Color.rgb(74,55,27), Color.rgb(34,27,18)});
+                new int[]{Color.rgb(74,55,27), Color.rgb(28,25,20)});
         layout.setBackground(bg);
         ImageView logo = new ImageView(this);
         logo.setImageResource(com.alnoor.school.R.drawable.ic_launcher);
         logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
         LinearLayout.LayoutParams imageParams = new LinearLayout.LayoutParams(dp(116), dp(116));
         imageParams.bottomMargin = dp(14);
+        imageParams.gravity = Gravity.CENTER_HORIZONTAL;
         layout.addView(logo, imageParams);
         TextView title = new TextView(this);
         title.setText("مدرسة النور");
         title.setTextColor(Color.rgb(240,210,94));
         title.setTextSize(28);
         title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        layout.addView(title);
+        title.setGravity(Gravity.CENTER);
+        title.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+        LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(-1, -2);
+        titleParams.gravity = Gravity.CENTER_HORIZONTAL;
+        layout.addView(title, titleParams);
         TextView subtitle = new TextView(this);
         subtitle.setText("المنصة التعليمية الذكية");
         subtitle.setTextColor(Color.rgb(229,212,168));
         subtitle.setTextSize(13);
-        LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(-2, -2);
+        subtitle.setGravity(Gravity.CENTER);
+        subtitle.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+        LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(-1, -2);
+        textParams.gravity = Gravity.CENTER_HORIZONTAL;
         textParams.topMargin = dp(6);
         layout.addView(subtitle, textParams);
         return layout;

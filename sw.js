@@ -1,5 +1,5 @@
-/* مدرسة النور 1.2.1 — precache + cache-first. Vendor runtime libraries are served locally. */
-const CACHE_VERSION = "alnoor-school-v1.2.1";
+/* مدرسة النور 1.3.0 — precache + cache-first. Vendor runtime libraries are served locally. */
+const CACHE_VERSION = "alnoor-school-v1.3.0";
 const APP_SHELL = [
   "./", "./index.html", "./styles.fixed.css", "./manifest.json",
   "./logo.png", "./logo-192.png", "./logo-512.png", "./apple-touch-icon.png",
