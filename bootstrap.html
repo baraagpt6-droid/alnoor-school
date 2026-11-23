@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#1C1914">
+  <title>تهيئة مدير مدرسة النور</title>
+  <style>
+    :root{color-scheme:dark;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#1c1914;color:#f6ecd2}
+    *{box-sizing:border-box}body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:22px;background:radial-gradient(circle at 50% 10%,#3b3020,#1c1914 60%)}
+    main{width:min(100%,440px);border:1px solid #725b2f;border-radius:24px;background:#29231b;padding:24px;box-shadow:0 24px 70px #0008}
+    h1{font-size:20px;margin:0 0 8px;color:#e5b84b}p{font-size:13px;line-height:1.9;color:#d8ccb0}
+    button{width:100%;min-height:48px;border:0;border-radius:14px;background:linear-gradient(120deg,#f1d27c,#c8952e);font-weight:900;color:#241e14;margin-top:14px}
+    .box{margin-top:16px;padding:14px;border-radius:14px;background:#1d1a15;border:1px solid #5f4c29;overflow-wrap:anywhere}
+    .label{font-size:11px;color:#c9b987}.value{font-size:15px;font-weight:900;direction:ltr;text-align:left;user-select:all;margin:5px 0 12px}
+    .hidden{display:none}.error{color:#ffb5a8}.ok{color:#b9d69a}.small{font-size:11px}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>تهيئة مدير مدرسة النور</h1>
+    <p>هذه خطوة لمرة واحدة فقط لإصدار حساب المدير الأول. سينشئ الخادم كلمة مرور مؤقتة، ويحفظ نسخة مشفّرة منها فقط. بعد الدخول سيطلب منك تعيين كلمة مرور جديدة.</p>
+    <p id="status" role="status">اضغط الزر لإكمال التهيئة الآمنة.</p>
+    <button id="start" type="button">إصدار حساب المدير الأول</button>
+    <section id="result" class="box hidden">
+      <div class="label">المعرّف الوظيفي</div>
+      <div id="login" class="value">ADM-0001</div>
+      <div class="label">كلمة المرور المؤقتة — تظهر مرة واحدة</div>
+      <div id="password" class="value"></div>
+      <button id="copy" type="button">نسخ بيانات الدخول</button>
+      <p class="small ok">بعد نسخها، افتح التطبيق وسجّل الدخول ببوابة المشرف العام، ثم غيّر كلمة المرور. لا تعِد تحميل هذه الصفحة بعد اكتمال العملية.</p>
+    </section>
+  </main>
+  <script>
+    const API = "https://br-falling-rain-azmx7t48-schoolapi.compute.c-3.ap-southeast-1.aws.neon.tech";
+    const statusLine = document.getElementById("status");
+    const startButton = document.getElementById("start");
+    const result = document.getElementById("result");
+    const login = document.getElementById("login");
+    const password = document.getElementById("password");
+    const token = decodeURIComponent(location.hash.slice(1));
+    history.replaceState(null, "", location.pathname + location.search);
+
+    startButton.addEventListener("click", async () => {
+      if (!token) {
+        statusLine.textContent = "رابط التهيئة غير مكتمل أو انتهت صلاحيته.";
+        statusLine.className = "error";
+        startButton.disabled = true;
+        return;
+      }
+      startButton.disabled = true;
+      statusLine.textContent = "يتصل الخادم ويهيئ حساب المدير...";
+      try {
+        const response = await fetch(API + "/api/bootstrap/initial-admin", {
+          method: "POST",
+          headers: { "content-type": "application/json", "accept": "application/json" },
+          body: JSON.stringify({ token })
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(body.error || "تعذرت التهيئة.");
+        login.textContent = body.login_id;
+        password.textContent = body.temporary_password;
+        result.classList.remove("hidden");
+        statusLine.textContent = "تم إنشاء حساب المدير. انسخ بيانات الدخول الآن.";
+        statusLine.className = "ok";
+        startButton.classList.add("hidden");
+        window.__alnoorBootstrapCredential = body.login_id + "\n" + body.temporary_password;
+      } catch (error) {
+        statusLine.textContent = error.message || "تعذر إكمال التهيئة.";
+        statusLine.className = "error";
+        startButton.disabled = false;
+      }
+    });
+
+    document.getElementById("copy").addEventListener("click", async () => {
+      const content = window.__alnoorBootstrapCredential || "";
+      try {
+        await navigator.clipboard.writeText(content);
+        document.getElementById("copy").textContent = "تم النسخ";
+      } catch {
+        document.getElementById("copy").textContent = "حدد المعرّف وكلمة المرور وانسخهما يدوياً";
+      }
+    });
+  </script>
+</body>
+</html>
