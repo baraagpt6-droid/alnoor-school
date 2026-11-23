@@ -100,16 +100,41 @@ jobs:
           console.log(`Validated ${blocks.length} JSX script block(s).`);
           const required = [
             'const APP_VERSION = "1.3.0";',
+            'أقسام بوابة المعلم',
+            'أقسام بوابة ولي الأمر',
+            'أقسام بوابة المشرف العام',
             'teacherTab === "attendance"',
+            'teacherTab === "work"',
+            'teacherTab === "schedule"',
             'parentTab === "attendance"',
+            'parentTab === "schedule"',
+            'parentTab === "messages"',
+            'adminTab === "students"',
+            'adminTab === "classes"',
             'adminTab === "communication"',
+            'تحضير الكل حاضر',
+            'exportSchoolReport',
+            'replyToParentMessage(msg.id)',
             'https://text.pollinations.ai/',
-            'id="alnoor-proxy-url"'
+            'id="alnoor-proxy-url"',
+            'other-portal-root'
           ];
           for (const value of required) if (!html.includes(value)) throw new Error("Missing release feature marker: " + value);
           if (html.includes("مفتاح Gemini") || html.includes("مفتاح Groq")) throw new Error("Legacy provider key fields must not appear in user UI.");
-          console.log("Validated 1.3.0 role portals and automatic assistant markers.");
+          console.log("Validated 1.3.0 portal, attendance, reporting, and assistant feature markers.");
           NODE
+
+      - name: Verify Android release metadata and native splash
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq "applicationId 'com.alnoor.school'" android/app/build.gradle
+          grep -Fq "versionCode 130" android/app/build.gradle
+          grep -Fq "versionName '1.3.0'" android/app/build.gradle
+          grep -Fq "setTextAlignment(View.TEXT_ALIGNMENT_CENTER)" android/app/src/main/java/com/alnoor/school/MainActivity.java
+          grep -Fq "document.getElementById('instant-splash')?.remove()" android/app/src/main/java/com/alnoor/school/MainActivity.java
+          grep -Fq "versionCode" android/app/build.gradle
+          echo "Android package, version, and centered single splash checks passed."
 
       - name: Build signed release APK
         working-directory: android
