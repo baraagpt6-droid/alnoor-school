@@ -1201,15 +1201,29 @@
             try {
               const studentId = cloudSession.user?.student_id;
               const completedLessons = (data.lessons || []).filter((lesson) => (lesson.completedBy || []).includes(studentId)).map((lesson) => lesson.id);
-              const quizCompletedBy = (data.lessons || []).flatMap((lesson) => (lesson.quizCompletedBy || []).filter((key) => key.startsWith(studentId + ":")));
+              const quizSubmissions = (data.lessons || []).flatMap((lesson) =>
+                Object.entries(lesson.quizSubmissions || {})
+                  .filter(([key, value]) => key.startsWith(studentId + ":" + lesson.id + ":") && Number.isInteger(Number(value?.answer)))
+                  .map(([key, value]) => ({
+                    lesson_id: lesson.id,
+                    quiz_id: key.slice((studentId + ":" + lesson.id + ":").length),
+                    answer: Number(value.answer)
+                  }))
+              );
               const assignmentSubmissions = Object.fromEntries((data.assignments || [])
                 .filter((assignment) => assignment.submissions?.[studentId])
                 .map((assignment) => [assignment.id, assignment.submissions[studentId]]));
-              await cloudRequest("/api/student/progress", {
+              const progressResult = await cloudRequest("/api/student/progress", {
                 method:"POST",
-                body:{ completed_lessons:completedLessons, quiz_completed_by:quizCompletedBy, assignment_submissions:assignmentSubmissions },
+                body:{ completed_lessons:completedLessons, quiz_submissions:quizSubmissions, assignment_submissions:assignmentSubmissions },
                 token:cloudSession.token
               });
+              setData((previous) => ({
+                ...previous,
+                students: previous.students.map((student) => student.id === studentId
+                  ? { ...student, points: Number(progressResult.points ?? student.points) }
+                  : student)
+              }));
               setCloudLastSync(new Date().toLocaleTimeString("ar"));
               setCloudStatus("online");
             } catch (error) {
@@ -1556,13 +1570,19 @@
         const choice = quizAnswers[key];
         if (choice === undefined || choice === null || choice === "") { notify("اختر إجابة قبل التصحيح"); return; }
         const correct = Number(choice) === Number(quiz.correctIndex);
-        const rewardKey = `${currentStudent.id}:${quiz.id || quizIndex}`;
-        const alreadyRewarded = (lesson.quizCompletedBy || []).includes(rewardKey);
+        const quizId = String(quiz.id || quizIndex);
+        const rewardKey = `${currentStudent.id}:${lesson.id}:${quizId}`;
+        const legacyRewardKey = `${currentStudent.id}:${quiz.id || quizIndex}`;
+        const alreadyRewarded = (lesson.quizCompletedBy || []).some((value) => value === rewardKey || value === legacyRewardKey);
         setQuizResults((prev) => ({ ...prev, [key]: { correct, answer: quiz.correctIndex } }));
         if (correct && !alreadyRewarded) {
           setData((prev) => ({
             ...prev,
-            lessons: prev.lessons.map((item) => item.id === lesson.id ? { ...item, quizCompletedBy: [...new Set([...(item.quizCompletedBy || []), rewardKey])] } : item),
+            lessons: prev.lessons.map((item) => item.id === lesson.id ? {
+              ...item,
+              quizCompletedBy: [...new Set([...(item.quizCompletedBy || []).filter((value) => value !== legacyRewardKey), rewardKey])],
+              quizSubmissions: { ...(item.quizSubmissions || {}), [rewardKey]: { answer: Number(choice) } }
+            } : item),
             students: prev.students.map((student) => student.id === currentStudent.id ? { ...student, points: (Number(student.points) || 0) + (Number(quiz.xp) || 10) } : student)
           }));
           notify(`إجابة صحيحة. حصلت على +${Number(quiz.xp) || 10} XP`);
