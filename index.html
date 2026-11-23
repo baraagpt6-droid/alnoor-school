@@ -1866,6 +1866,53 @@
         admin: ["تقرير المدرسة العام", "حالة الإعلانات والطلاب"]
       };
 
+      const getStudentAverage = (student) => {
+        const marks = Array.isArray(student?.marks) ? student.marks : [];
+        return marks.length ? Math.round(marks.reduce((sum, mark) => sum + (Number(mark.termWork) || 0) + (Number(mark.finalExam) || 0), 0) / marks.length) : 0;
+      };
+      const currentStudentAverage = getStudentAverage(currentStudent);
+      const rankedStudents = [...(data.students || [])].sort((a, b) => getStudentAverage(b) - getStudentAverage(a) || String(a.name || "").localeCompare(String(b.name || ""), "ar"));
+      const currentStudentRank = Math.max(0, rankedStudents.findIndex((student) => student.id === currentStudent.id) + 1);
+      const parentAttendanceLog = (data.attendanceRecords || [])
+        .filter((record) => record?.entries?.[currentStudent.id])
+        .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+      const parentAssignments = (data.assignments || []).filter((item) => !item.grade || item.grade === currentStudent.grade);
+      const parentSchedule = data.scheduleByGrade?.[currentStudent.grade] || [];
+      const parentMessagesForStudent = (data.parentMessages || []).filter((message) =>
+        !message.studentId || message.studentId === currentStudent.id || String(message.from || "").includes(currentStudent.name)
+      );
+
+      const exportSchoolReport = () => {
+        const rows = [
+          ["رقم الطالب", "اسم الطالب", "الصف", "الحضور %", "المعدل %"],
+          ...(data.students || []).map((student) => [student.id, student.name, student.grade, student.attendance, getStudentAverage(student)])
+        ];
+        const csv = "\\uFEFF" + rows.map((row) => row.map((value) => '"' + String(value ?? "").replace(/"/g, '""') + '"').join(",")).join("\\r\\n");
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "alnoor-school-report.csv";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+        notify("تم تجهيز تقرير المدرسة بصيغة CSV");
+      };
+
+      const replyToParentMessage = (messageId) => {
+        const reply = String(adminReplyDrafts[messageId] || "").trim().slice(0, 1200);
+        if (!reply) { notify("اكتب الرد أولاً"); return; }
+        setData((previous) => ({
+          ...previous,
+          parentMessages: (previous.parentMessages || []).map((message) =>
+            message.id === messageId ? { ...message, reply, replyTime: "الآن" } : message
+          )
+        }));
+        setAdminReplyDrafts((previous) => ({ ...previous, [messageId]: "" }));
+        notify("تم حفظ الرد محلياً");
+      };
+
       return (
         <div className={`min-h-[100dvh] max-w-[680px] mx-auto pb-28 ${role === "student" ? "student-app-root" : ""}`}>
           {/* الشريط العلوي المتناسق بدون أي التفاف أو تكرار */}
@@ -2301,68 +2348,152 @@
 
             {/* ==================== بوابة ولي الأمر ==================== */}
             {role === "parent" && (
-              <div className="space-y-4">
-                <div className="card p-4 space-y-3">
+              <div className="space-y-4 parent-portal-root">
+                <section className="card p-4 space-y-3" aria-label="بطاقة متابعة الطالب">
                   <div className="flex items-center gap-3">
                     <SmartEmojiBadge icon="parent" active size={48} />
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <h2 className="text-base font-black">متابعة الطالب: {currentStudent.name}</h2>
-                      <p className="text-xs font-bold text-[var(--muted)]">
-                        {currentStudent.grade} • نسبة الحضور: <strong className="text-[#7A8A44]">{currentStudent.attendance}%</strong>
-                      </p>
+                      <p className="text-xs font-bold text-[var(--muted)]">{currentStudent.grade} • رقم القيد {currentStudent.id}</p>
                     </div>
                   </div>
-                  <div className="p-3 rounded-2xl bg-[var(--surface2)] border border-[var(--line)] text-xs font-bold">
-                    ملاحظة المعلم: <span className="text-[#E8C84A]">{currentStudent.teacherNote}</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="rounded-xl bg-[var(--surface2)] p-2 text-center">
+                      <div className="text-lg font-black text-[#7A8A44]">{currentStudent.attendance}%</div>
+                      <div className="text-[10px] font-bold text-[var(--muted)]">الحضور</div>
+                    </div>
+                    <div className="rounded-xl bg-[var(--surface2)] p-2 text-center">
+                      <div className="text-lg font-black text-[#E8C84A]">{currentStudentAverage}%</div>
+                      <div className="text-[10px] font-bold text-[var(--muted)]">المعدل العام</div>
+                    </div>
+                    <div className="rounded-xl bg-[var(--surface2)] p-2 text-center">
+                      <div className="text-lg font-black text-[var(--ink)]">{currentStudentRank || "—"} / {data.students.length}</div>
+                      <div className="text-[10px] font-bold text-[var(--muted)]">الترتيب</div>
+                    </div>
                   </div>
-                </div>
+                  <div className="rounded-xl border border-[var(--line)] bg-[var(--surface2)] p-3 text-xs font-bold leading-6">
+                    التقدير العام: <strong className="text-[#E8C84A]">{currentStudentAverage >= 90 ? "ممتاز" : currentStudentAverage >= 80 ? "جيد جداً" : currentStudentAverage >= 70 ? "جيد" : currentStudentAverage >= 50 ? "مقبول" : "يحتاج متابعة"}</strong>
+                    <div>ملاحظة المعلم: <span className="text-[var(--ink)]">{currentStudent.teacherNote || "لا توجد ملاحظة مسجلة."}</span></div>
+                  </div>
+                </section>
 
-                <div className="card p-4 space-y-2">
-                  <h3 className="text-sm font-black text-[#E8C84A]">ملخص الدرجات المعتمدة (من 100)</h3>
-                  {currentStudent.marks.map((m, i) => (
-                    <div key={i} className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--surface2)] text-xs font-bold">
-                      <span>{m.subject}</span>
-                      <span className="font-black text-[#E8C84A]">{Number(m.termWork) + Number(m.finalExam)} / 100</span>
-                    </div>
+                <nav className="portal-tabs" role="tablist" aria-label="أقسام بوابة ولي الأمر">
+                  {[
+                    { id: "grades", label: "الدرجات" },
+                    { id: "attendance", label: "سجل الحضور" },
+                    { id: "schedule", label: "الجدول والواجبات" },
+                    { id: "messages", label: "التواصل" }
+                  ].map((tab) => (
+                    <button key={tab.id} type="button" role="tab" aria-selected={parentTab === tab.id} onClick={() => setParentTab(tab.id)}>
+                      {tab.label}
+                    </button>
                   ))}
-                </div>
+                </nav>
 
-                <div className="card p-4 space-y-3">
-                  <h3 className="text-sm font-black text-[#E8C84A]">إرسال رسالة إلى إدارة المدرسة أو المعلم</h3>
-                  <textarea
-                    rows="3"
-                    maxLength={1200}
-                    className="input text-sm"
-                    placeholder="اكتب رسالتك أو استفسارك هنا..."
-                    value={parentMsgText}
-                    onChange={(e) => setParentMsgText(e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!parentMsgText.trim()) return;
-                      setData((prev) => ({
-                        ...prev,
-                        parentMessages: [
-                          { id: Date.now().toString(), from: `ولي أمر ${currentStudent.name}`, text: parentMsgText.trim(), time: "الآن" },
-                          ...prev.parentMessages
-                        ]
-                      }));
-                      setParentMsgText("");
-                      notify("تم إرسال رسالتك إلى المدرسة بنجاح");
-                    }}
-                    className="btn btn-gold w-full text-sm"
-                  >
-                    إرسال الرسالة الآن
-                  </button>
-                </div>
+                {parentTab === "grades" && (
+                  <section className="card p-4 space-y-3">
+                    <h3 className="text-sm font-black text-[#E8C84A]">الدرجات المعتمدة في هذا الجهاز</h3>
+                    {currentStudent.marks.map((mark, index) => (
+                      <div key={index} className="flex items-center justify-between gap-3 rounded-xl bg-[var(--surface2)] p-3 text-xs font-bold">
+                        <span>{mark.subject}</span>
+                        <span className="font-black text-[#E8C84A]">{Number(mark.termWork) + Number(mark.finalExam)} / 100</span>
+                      </div>
+                    ))}
+                    <p className="source-note">المعدل والترتيب يحسبان من الدرجات المحفوظة محلياً على هذا الجهاز.</p>
+                  </section>
+                )}
+
+                {parentTab === "attendance" && (
+                  <section className="card p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="text-sm font-black text-[#E8C84A]">سجل الحضور بالأيام</h3>
+                      <span className="text-xs font-bold text-[var(--muted)]">{parentAttendanceLog.length} سجلاً</span>
+                    </div>
+                    {parentAttendanceLog.length ? parentAttendanceLog.map((record) => {
+                      const status = record.entries[currentStudent.id];
+                      const statusLabel = status === "present" ? "حاضر" : status === "late" ? "متأخر" : "غائب";
+                      return (
+                        <div key={record.id || record.date} className="flex items-center justify-between rounded-xl bg-[var(--surface2)] p-3 text-xs font-bold">
+                          <span>{record.date}</span><span className={status === "absent" ? "text-[#A64A35]" : "text-[#7A8A44]"}>{statusLabel}</span>
+                        </div>
+                      );
+                    }) : <p className="text-xs font-bold text-[var(--muted)]">لا توجد سجلات حضور محفوظة لهذا الطالب بعد.</p>}
+                  </section>
+                )}
+
+                {parentTab === "schedule" && (
+                  <div className="space-y-3">
+                    <section className="card p-4 space-y-3">
+                      <h3 className="text-sm font-black text-[#E8C84A]">جدول الأسبوع</h3>
+                      {parentSchedule.map((row) => (
+                        <div key={row.day} className="grid grid-cols-[76px_minmax(0,1fr)] gap-2 rounded-xl bg-[var(--surface2)] p-3 text-xs">
+                          <strong>{row.day}</strong><span className="whitespace-pre-wrap break-words">{row.classes || "لم يحدد المعلم الحصص بعد"}</span>
+                        </div>
+                      ))}
+                      {!parentSchedule.length && <p className="text-xs font-bold text-[var(--muted)]">لا يوجد جدول محفوظ لهذا الصف.</p>}
+                    </section>
+                    <section className="card p-4 space-y-3">
+                      <h3 className="text-sm font-black text-[#E8C84A]">الواجبات المطلوبة</h3>
+                      {parentAssignments.map((item) => (
+                        <article key={item.id} className="rounded-xl bg-[var(--surface2)] p-3 space-y-1 text-xs">
+                          <strong>{item.title}</strong><p>{item.subject} • {item.grade || currentStudent.grade}</p><p className="leading-6">{item.question}</p>
+                        </article>
+                      ))}
+                      {!parentAssignments.length && <p className="text-xs font-bold text-[var(--muted)]">لا توجد واجبات منشورة لهذا الصف في البيانات المحلية.</p>}
+                    </section>
+                  </div>
+                )}
+
+                {parentTab === "messages" && (
+                  <div className="space-y-3">
+                    <section className="card p-4 space-y-3">
+                      <h3 className="text-sm font-black text-[#E8C84A]">إرسال رسالة إلى المدرسة</h3>
+                      <textarea rows="3" maxLength={1200} className="input text-sm" placeholder="اكتب رسالتك أو استفسارك هنا..." value={parentMsgText} onChange={(event) => setParentMsgText(event.target.value)} />
+                      <button type="button" onClick={() => {
+                        const message = parentMsgText.trim();
+                        if (!message) return;
+                        setData((previous) => ({
+                          ...previous,
+                          parentMessages: [
+                            { id: Date.now().toString(), studentId: currentStudent.id, from: `ولي أمر ${currentStudent.name}`, text: message, time: "الآن", reply: "" },
+                            ...(previous.parentMessages || [])
+                          ]
+                        }));
+                        setParentMsgText("");
+                        notify("تم حفظ رسالتك على هذا الجهاز");
+                      }} className="btn btn-gold w-full text-sm">إرسال الرسالة</button>
+                    </section>
+                    <section className="card p-4 space-y-3">
+                      <h3 className="text-sm font-black text-[#E8C84A]">الردود والرسائل السابقة</h3>
+                      {parentMessagesForStudent.map((message) => (
+                        <article key={message.id} className="rounded-xl bg-[var(--surface2)] p-3 space-y-2 text-xs">
+                          <div className="flex items-center justify-between gap-2"><strong>{message.time || "رسالة سابقة"}</strong><span className="text-[var(--muted)]">{message.reply ? "تم الرد" : "بانتظار الرد"}</span></div>
+                          <p className="leading-6">{message.text}</p>
+                          {message.reply && <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3"><strong className="text-[#7A8A44]">رد المدرسة</strong><p className="mt-1 leading-6">{message.reply}</p><span className="text-[10px] text-[var(--muted)]">{message.replyTime || ""}</span></div>}
+                        </article>
+                      ))}
+                      {!parentMessagesForStudent.length && <p className="text-xs font-bold text-[var(--muted)]">لا توجد رسائل محفوظة بعد.</p>}
+                    </section>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* ==================== بوابة المعلم ==================== */}
             {role === "teacher" && (
-              <div className="space-y-4">
-                <div className="card p-4 space-y-3">
+              <div className="space-y-4 teacher-portal-root">
+                <nav className="portal-tabs" role="tablist" aria-label="أقسام بوابة المعلم">
+                  {[
+                    { id: "lessons", label: "الدروس والمختبر" },
+                    { id: "attendance", label: "الحضور السريع" },
+                    { id: "work", label: "الواجبات والدرجات" },
+                    { id: "schedule", label: "جدول الحصص" }
+                  ].map((tab) => (
+                    <button key={tab.id} type="button" role="tab" aria-selected={teacherTab === tab.id} onClick={() => setTeacherTab(tab.id)}>{tab.label}</button>
+                  ))}
+                </nav>
+                {teacherTab === "lessons" && (
+                  <div className="space-y-4">
+                                    <div className="card p-4 space-y-3">
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <h2 className="text-base font-black text-[#E8C84A]">إدارة الدروس والمناهج</h2>
                     <a href={CURRICULUM_BOOKS_URL} target="_blank" rel="noopener noreferrer" className="text-xs font-bold underline">فتح المقررات الرسمية</a>
@@ -2411,7 +2542,11 @@
                     <p className="source-note">الدروس التي تضيفها تحفظ في هذا المتصفح فقط. نشرها ومشاركتها بين حسابات المدرسة يحتاج قاعدة بيانات وخادماً.</p>
                   </div>
                 </div>
-                <div className="card p-4 space-y-3">
+                  </div>
+                )}
+                {teacherTab === "work" && (
+                  <div className="space-y-4">
+                                    <div className="card p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <h2 className="text-base font-black text-[#E8C84A]">رصد وتعديل الدرجات (40 + 60)</h2>
                     <select
@@ -2571,10 +2706,11 @@
                     نشر الواجب فوراً
                   </button>
                 </div>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* ==================== بوابة المشرف العام والإدارة ==================== */}
             {role === "admin" && (
               <div className="space-y-4">
                 <div className="grid grid-cols-3 gap-2.5">
