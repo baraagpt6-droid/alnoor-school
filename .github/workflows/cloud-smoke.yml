@@ -43,6 +43,7 @@ jobs:
             "ionic://localhost" \
             "null"; do
             HEADERS="$(curl --retry 2 --retry-delay 1 --connect-timeout 15 --max-time 30 -fsS -D - -o /dev/null -H "Origin: $ORIGIN" "$API/api/health")"
+            echo "$HEADERS"
             if [ "$ORIGIN" = "null" ]; then
               echo "$HEADERS" | grep -Fai "access-control-allow-origin: *"
             else
