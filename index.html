@@ -1572,23 +1572,25 @@
             return output.trim();
           }
 
-          // Public legacy Pollinations endpoint: best-effort anonymous access.
-          // The hosted app does not contain or transmit a provider API key.
-          const prompt = `${system}\n\nسؤال المستخدم: ${String(question).slice(0, 500)}\n\nأجب بإجابة مفهومة ومباشرة.`;
-          const endpoint = new URL("https://text.pollinations.ai/" + encodeURIComponent(prompt));
-          endpoint.searchParams.set("model", "openai");
-          const response = await fetch(endpoint.toString(), {
-            method: "GET",
-            headers: { "Accept": "text/plain, application/json" },
+          // Legacy OpenAI-compatible free endpoint. Best-effort anonymous access only;
+          // if this public route is changed or rate-limited, the caller uses local lessons.
+          const response = await fetch("https://text.pollinations.ai/openai", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Accept": "application/json" },
+            body: JSON.stringify({
+              model: "openai-fast",
+              messages: [
+                { role: "system", content: system },
+                { role: "user", content: String(question).slice(0, 500) }
+              ],
+              temperature: 0.45,
+              max_tokens: 1100
+            }),
             signal: controller?.signal
           });
-          const raw = await response.text();
-          if (!response.ok) throw new Error(`Pollinations HTTP ${response.status}`);
-          let output = raw;
-          try {
-            const payload = JSON.parse(raw);
-            output = payload.reply || payload.answer || payload.text || payload.content || payload.choices?.[0]?.message?.content || raw;
-          } catch {}
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(payload?.error?.message || payload?.error || `Pollinations HTTP ${response.status}`);
+          const output = payload?.choices?.[0]?.message?.content || payload.reply || payload.answer || payload.text;
           if (typeof output !== "string" || !output.trim()) throw new Error("خدمة الإجابة لم ترجع نصاً.");
           return output.trim().slice(0, 9000);
         } finally {
