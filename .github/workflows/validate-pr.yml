@@ -1,0 +1,100 @@
+name: Validate Alnoor School pull requests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "sw.js"
+      - "manifest.json"
+      - "android/**"
+      - ".github/workflows/**"
+      - "alnoor-school-release-1.1.3.zip"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Verify source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          unzip -t alnoor-school-release-1.1.3.zip
+
+      - name: Fetch Babel parser
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .validation/vendor
+          curl --retry 3 --retry-delay 2 -fLsS https://unpkg.com/@babel/standalone@7.26.10/babel.min.js -o .validation/vendor/babel.min.js
+          test -s .validation/vendor/babel.min.js
+
+      - name: Validate JSX and release features
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require("node:fs");
+          const Babel = require("./.validation/vendor/babel.min.js");
+          const html = fs.readFileSync("index.html", "utf8");
+          const blocks = [...html.matchAll(/<script\\b[^>]*\\btype=["']text\\/babel["'][^>]*>([\\s\\S]*?)<\\/script>/gi)];
+          if (!blocks.length) throw new Error("No JSX application script found.");
+          blocks.forEach((match) => Babel.transform(match[1], { presets: ["react"], sourceType: "script" }));
+          const required = [
+            'const APP_VERSION = "1.3.0";',
+            'أقسام بوابة المعلم',
+            'أقسام بوابة ولي الأمر',
+            'أقسام بوابة المشرف العام',
+            'teacherTab === "attendance"',
+            'teacherTab === "work"',
+            'teacherTab === "schedule"',
+            'parentTab === "attendance"',
+            'parentTab === "schedule"',
+            'parentTab === "messages"',
+            'adminTab === "students"',
+            'adminTab === "classes"',
+            'adminTab === "communication"',
+            'تحضير الكل حاضر',
+            'exportSchoolReport',
+            'replyToParentMessage(msg.id)',
+            'https://text.pollinations.ai/openai',
+            'id="alnoor-proxy-url"',
+            'buildLocalAssistantReply(q)',
+            'other-portal-root'
+          ];
+          for (const value of required) {
+            if (!html.includes(value)) throw new Error("Missing feature marker: " + value);
+          }
+          for (const forbidden of ["geminiKey", "groqKey", "pollinationsAppKey", "pollinationsToken", "مفتاح Gemini", "مفتاح Groq"]) {
+            if (html.includes(forbidden)) throw new Error("Legacy API credential input remains in the UI/source: " + forbidden);
+          }
+          console.log(`JSX syntax passed. Validated ${blocks.length} script block(s) and all 1.3.0 feature markers.`);
+          NODE
+
+      - name: Validate Android package and splash source
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq "applicationId 'com.alnoor.school'" android/app/build.gradle
+          grep -Fq "versionCode 130" android/app/build.gradle
+          grep -Fq "versionName '1.3.0'" android/app/build.gradle
+          grep -Fq "setTextAlignment(View.TEXT_ALIGNMENT_CENTER)" android/app/src/main/java/com/alnoor/school/MainActivity.java
+          grep -Fq "document.getElementById('instant-splash')?.remove()" android/app/src/main/java/com/alnoor/school/MainActivity.java
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          ET.parse("android/app/src/main/AndroidManifest.xml")
+          ET.parse("android/app/src/main/res/values/styles.xml")
+          print("Android manifest and theme XML are valid.")
+          PY
+
