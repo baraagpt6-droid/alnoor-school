@@ -78,6 +78,15 @@ jobs:
             echo "Cloud login verified for role: $ROLE"
           done
 
+      - name: Verify Neon Realtime token issuance
+        shell: bash
+        run: |
+          set -euo pipefail
+          API="https://br-falling-rain-azmx7t48-schoolapi.compute.c-3.ap-southeast-1.aws.neon.tech"
+          BODY="$(curl --retry 2 --retry-delay 1 --connect-timeout 15 --max-time 30 -fsS -X POST -H "Authorization: Bearer $ALNOOR_TOKEN_admin" -H 'Content-Type: application/json' -d '{}' "$API/api/realtime/seal")"
+          echo "$BODY" | jq -e '.sealed | strings | length > 0' >/dev/null
+          echo "Neon Realtime token issuance passed."
+
       - name: Verify teacher-to-student-and-parent synchronization
         shell: bash
         run: |
