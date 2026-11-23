@@ -30,7 +30,7 @@ jobs:
         run: |
           npm init -y
           npm install --no-save playwright sharp
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
       - name: Render official graphics and capture published app
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
