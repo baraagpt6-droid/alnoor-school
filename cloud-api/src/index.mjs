@@ -6,6 +6,7 @@ const ORIGIN = process.env.APP_ORIGIN || "https://baraagpt6-droid.github.io";
 const ALLOWED_ORIGINS = new Set([
   ORIGIN,
   "https://baraagpt6-droid.github.io",
+  "https://alnoor-school.netlify.app",
   "http://localhost",
   "https://localhost",
   "capacitor://localhost",
