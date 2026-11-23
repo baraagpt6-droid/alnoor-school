@@ -76,7 +76,7 @@ jobs:
           }
           console.log(`JSX syntax passed and Alnoor 2.0.0 cloud markers validated across ${blocks.length} script block(s).`);
 
-                    NODE
+          NODE
 
       - name: Validate cloud API source
         shell: bash
@@ -87,7 +87,6 @@ jobs:
           grep -Fq 'path === "/api/student/progress"' cloud-api/src/index.mjs
           grep -Fq 'path === "/api/realtime/seal"' cloud-api/src/index.mjs
           grep -Fq 'return send(request, await createSchoolAccount(account, await readBody(request)))' cloud-api/src/index.mjs
-          grep -Fq 'default:' cloud-api/package.json || true
           test -s bootstrap.html
           grep -Fq '"/api/bootstrap/initial-admin"' bootstrap.html
           echo "Cloud API syntax and one-time bootstrap page checks passed."
