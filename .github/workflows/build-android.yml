@@ -156,16 +156,16 @@ jobs:
           sha256sum alnoor-school-2.0.2.apk
           echo "APK signature and expected release certificate verified."
 
-      - name: Stage temporary signed APK payload
+      - name: Publish signed APK for direct download
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p .android-release-staging
-          base64 -w 0 alnoor-school-2.0.2.apk > .android-release-staging/alnoor-school-2.0.2.apk.b64
+          mkdir -p downloads
+          cp alnoor-school-2.0.2.apk downloads/alnoor-school-2.0.2.apk
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .android-release-staging/alnoor-school-2.0.2.apk.b64
-          git commit -m "Temporarily stage signed Android 2.0.2 APK"
+          git add downloads/alnoor-school-2.0.2.apk
+          git commit -m "Publish signed Android 2.0.2 APK"
           git push origin HEAD:main
       - name: Upload signed APK artifact
         uses: actions/upload-artifact@v4
