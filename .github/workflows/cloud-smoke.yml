@@ -1,4 +1,5 @@
 name: Alnoor School 2.0.1 Cloud API smoke test
+# Re-run after adding the Netlify production origin.
 
 on:
   push:
