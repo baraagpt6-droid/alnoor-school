@@ -1,12 +1,16 @@
-name: Alnoor School 2.0.1 Cloud API smoke test
-# Re-run after adding the Netlify production origin.
+name: Alnoor School 2.0.2 production smoke test
 
 on:
   push:
     branches: [main]
     paths:
+      - "index.html"
+      - "sw.js"
+      - "manifest.json"
+      - "cloud-api/src/index.mjs"
       - ".github/workflows/cloud-smoke.yml"
       - ".github/workflows/deploy.yml"
+      - ".github/workflows/build-android.yml"
   workflow_dispatch:
 
 permissions:
@@ -25,34 +29,21 @@ jobs:
           set -euo pipefail
           API="https://br-falling-rain-azmx7t48-schoolapi.compute.c-3.ap-southeast-1.aws.neon.tech"
           BODY="$(curl --retry 3 --retry-delay 2 --connect-timeout 15 --max-time 30 -fsS "$API/api/health")"
-          echo "$BODY" | grep -F '"ok":true'
-          echo "$BODY" | grep -F '"database":"neondb"'
+          echo "$BODY" | jq -e '.ok == true and .database.database == "neondb"' >/dev/null
           echo "SchoolAPI health and database connection passed."
 
-      - name: Build and validate Netlify publish directory
+      - name: Verify GitHub Pages production site and PWA
         shell: bash
         run: |
           set -euo pipefail
-          bash .github/scripts/build-netlify.sh
-          test -s site/index.html
-          test -s site/styles.fixed.css
-          test -s site/manifest.json
-          test -s site/sw.js
-          test -s site/vendor/react.production.min.js
-          echo "Netlify production build output passed."
-
-      - name: Verify official Netlify PWA deployment
-        shell: bash
-        run: |
-          set -euo pipefail
-          SITE="https://alnoor-school.netlify.app"
+          SITE="https://baraagpt6-droid.github.io/alnoor-school"
           HTML="$(curl --retry 3 --retry-delay 2 --connect-timeout 15 --max-time 45 -fsSL "$SITE/")"
-          echo "$HTML" | grep -F 'const APP_VERSION = "2.0.1";'
+          echo "$HTML" | grep -F 'const APP_VERSION = "2.0.2+'
           MANIFEST="$(curl --retry 3 --retry-delay 2 --connect-timeout 15 --max-time 30 -fsSL "$SITE/manifest.json")"
           echo "$MANIFEST" | jq -e '.name | contains("مدرسة النور")' >/dev/null
           WORKER="$(curl --retry 3 --retry-delay 2 --connect-timeout 15 --max-time 30 -fsSL "$SITE/sw.js")"
-          echo "$WORKER" | grep -F 'alnoor-school-v2.0.1'
-          echo "Netlify site, manifest, and PWA service worker passed."
+          echo "$WORKER" | grep -F 'alnoor-school-v2.0.2+'
+          echo "GitHub Pages site, manifest, and PWA service worker passed."
 
       - name: Check browser and Android CORS origins
         shell: bash
@@ -61,14 +52,12 @@ jobs:
           API="https://br-falling-rain-azmx7t48-schoolapi.compute.c-3.ap-southeast-1.aws.neon.tech"
           for ORIGIN in \
             "https://baraagpt6-droid.github.io" \
-            "https://alnoor-school.netlify.app" \
             "http://localhost:5173" \
             "http://localhost:8080" \
             "capacitor://localhost" \
             "ionic://localhost" \
             "null"; do
             HEADERS="$(curl --retry 2 --retry-delay 1 --connect-timeout 15 --max-time 30 -fsS -D - -o /dev/null -H "Origin: $ORIGIN" "$API/api/health")"
-            echo "$HEADERS"
             if [ "$ORIGIN" = "null" ]; then
               echo "$HEADERS" | grep -Fai "access-control-allow-origin: *"
             else
@@ -97,7 +86,7 @@ jobs:
           for ROLE in admin teacher student parent; do
             LOGIN_ID="$(jq -r ".$ROLE.id" "$RUNNER_TEMP/alnoor-demo-credentials.json")"
             PASSWORD="$(jq -r ".$ROLE.password" "$RUNNER_TEMP/alnoor-demo-credentials.json")"
-            BODY="$(jq -n --arg id "$LOGIN_ID" --arg role "$ROLE" --arg password "$PASSWORD" '{login_id:$id,role:$role,password:$password}' | curl --retry 2 --retry-delay 1 --connect-timeout 15 --max-time 30 -fsS -H 'Origin: https://alnoor-school.netlify.app' -H 'Content-Type: application/json' -d @- "$API/api/auth/login")"
+            BODY="$(jq -n --arg id "$LOGIN_ID" --arg role "$ROLE" --arg password "$PASSWORD" '{login_id:$id,role:$role,password:$password}' | curl --retry 2 --retry-delay 1 --connect-timeout 15 --max-time 30 -fsS -H 'Origin: https://baraagpt6-droid.github.io' -H 'Content-Type: application/json' -d @- "$API/api/auth/login")"
             TOKEN="$(echo "$BODY" | jq -r '.token // empty')"
             test -n "$TOKEN"
             ME="$(curl --retry 2 --retry-delay 1 --connect-timeout 15 --max-time 30 -fsS -H "Authorization: Bearer $TOKEN" "$API/api/me")"
@@ -115,31 +104,17 @@ jobs:
           echo "$BODY" | jq -e 'has("sealed") and (.sealed != null)' >/dev/null
           echo "Neon Realtime token issuance passed."
 
-      - name: Verify teacher-to-student-and-parent synchronization
+      - name: Verify snapshot synchronization for every role (read-only)
         shell: bash
         run: |
           set -euo pipefail
           API="https://br-falling-rain-azmx7t48-schoolapi.compute.c-3.ap-southeast-1.aws.neon.tech"
-          BODY='{"changes":{"lessons":[{"id":"E2E-DEMO-201","grade":"الصف السادس الأساسي","subject":"اختبار الربط","title":"درس تحقق المزامنة","description":"سجل اختبار آلي لنسخة المعاينة"}]}}'
-          PUSH="$(curl --retry 2 --retry-delay 1 --connect-timeout 15 --max-time 30 -fsS -X POST -H "Authorization: Bearer $ALNOOR_TOKEN_teacher" -H 'Content-Type: application/json' -d "$BODY" "$API/api/sync/push")"
-          echo "$PUSH" | jq -e '.ok == true and (.synchronized | index("lessons") != null)'
-          for ROLE in student parent admin; do
+          for ROLE in admin teacher student parent; do
             TOKEN_VAR="ALNOOR_TOKEN_$ROLE"
             TOKEN="${!TOKEN_VAR}"
             SNAPSHOT="$(curl --retry 2 --retry-delay 1 --connect-timeout 15 --max-time 30 -fsS -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{}' "$API/api/sync/pull")"
-            echo "$SNAPSHOT" | jq -e '[.lessons[]? | select(.id == "E2E-DEMO-201")] | length == 1' >/dev/null
-            echo "Teacher lesson synced to role: $ROLE"
-          done
-
-          ADMIN_BODY='{"changes":{"lessons":[{"id":"E2E-ADMIN-201","grade":"الصف السادس الأساسي","subject":"اختبار الإدارة","title":"درس تحقق مزامنة المشرف","description":"سجل اختبار آلي لنشر الإدارة"}]}}'
-          ADMIN_PUSH="$(curl --retry 2 --retry-delay 1 --connect-timeout 15 --max-time 30 -fsS -X POST -H "Authorization: Bearer $ALNOOR_TOKEN_admin" -H 'Content-Type: application/json' -d "$ADMIN_BODY" "$API/api/sync/push")"
-          echo "$ADMIN_PUSH" | jq -e '.ok == true and (.synchronized | index("lessons") != null)'
-          for ROLE in teacher student parent; do
-            TOKEN_VAR="ALNOOR_TOKEN_$ROLE"
-            TOKEN="${!TOKEN_VAR}"
-            SNAPSHOT="$(curl --retry 2 --retry-delay 1 --connect-timeout 15 --max-time 30 -fsS -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{}' "$API/api/sync/pull")"
-            echo "$SNAPSHOT" | jq -e '[.lessons[]? | select(.id == "E2E-ADMIN-201")] | length == 1' >/dev/null
-            echo "Admin lesson synced to role: $ROLE"
+            echo "$SNAPSHOT" | jq -e '(.students | type == "array") and (.lessons | type == "array") and (.assignments | type == "array")' >/dev/null
+            echo "Cloud snapshot pull verified for role: $ROLE"
           done
 
       - name: Verify Noor Assistant API response

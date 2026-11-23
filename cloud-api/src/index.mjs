@@ -2,11 +2,10 @@ import { Pool } from "pg";
 import { createHash, createHmac, timingSafeEqual, randomBytes } from "node:crypto";
 import { createRealtime, rawSql } from "@neon/realtime/server";
 
-const ORIGIN = process.env.APP_ORIGIN || "https://baraagpt6-droid.github.io";
+const ORIGIN = "https://baraagpt6-droid.github.io";
 const ALLOWED_ORIGINS = new Set([
   ORIGIN,
   "https://baraagpt6-droid.github.io",
-  "https://alnoor-school.netlify.app",
   "http://localhost",
   "https://localhost",
   "capacitor://localhost",
@@ -16,7 +15,6 @@ const ALLOWED_ORIGINS = new Set([
   "http://127.0.0.1",
   "http://127.0.0.1:5173",
   "http://127.0.0.1:8080",
-  ...String(process.env.CORS_ALLOWED_ORIGINS || "").split(",").map((value) => value.trim()).filter(Boolean)
 ]);
 const JWT_SECRET = process.env.SCHOOL_JWT_SECRET;
 const pool = new Pool({

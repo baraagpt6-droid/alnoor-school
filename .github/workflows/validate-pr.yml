@@ -54,7 +54,7 @@ jobs:
           if (!blocks.length) throw new Error("No JSX application script found.");
           blocks.forEach((match) => Babel.transform(match[1], { presets: ["react"], sourceType: "script" }));
           const required = [
-            'const APP_VERSION = "2.0.0";',
+            'const APP_VERSION = "2.0.2";',
             'CLOUD_API_BASE',
             'cloudRequest("/api/auth/login"',
             'cloudRequest("/api/sync/pull"',
@@ -74,7 +74,7 @@ jobs:
           for (const forbidden of ["geminiKey", "groqKey", "مفتاح Gemini", "مفتاح Groq"]) {
             if (html.includes(forbidden)) throw new Error("Provider API key fields must not remain in the app.");
           }
-          console.log(`JSX syntax passed and Alnoor 2.0.0 cloud markers validated across ${blocks.length} script block(s).`);
+          console.log(`JSX syntax passed and Alnoor 2.0.2 cloud markers validated across ${blocks.length} script block(s).`);
 
           NODE
 
@@ -96,8 +96,8 @@ jobs:
         run: |
           set -euo pipefail
           grep -Fq "applicationId 'com.alnoor.school'" android/app/build.gradle
-          grep -Fq "versionCode 200" android/app/build.gradle
-          grep -Fq "versionName '2.0.0'" android/app/build.gradle
+          grep -Fq "versionCode 202" android/app/build.gradle
+          grep -Fq "versionName '2.0.2'" android/app/build.gradle
           grep -Fq "setTextAlignment(View.TEXT_ALIGNMENT_CENTER)" android/app/src/main/java/com/alnoor/school/MainActivity.java
           grep -Fq "document.getElementById('instant-splash')?.remove()" android/app/src/main/java/com/alnoor/school/MainActivity.java
           python - <<'PY'

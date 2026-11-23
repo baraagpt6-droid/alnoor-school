@@ -1,4 +1,4 @@
-name: Deploy Alnoor School 2.0.1 to GitHub Pages
+name: Deploy Alnoor School 2.0.2 to GitHub Pages
 
 on:
   push:
@@ -47,8 +47,8 @@ jobs:
           test -s site/sw.js
           test -s site/bootstrap.html
           grep -q '/api/bootstrap/initial-admin' site/bootstrap.html
-          grep -q 'const APP_VERSION = "2.0.1";' site/index.html
-          grep -q 'alnoor-school-v2.0.1' site/sw.js
+          grep -q 'const APP_VERSION = "2.0.2";' site/index.html
+          grep -q 'alnoor-school-v2.0.2' site/sw.js
 
       - name: Bundle local runtime libraries
         shell: bash
@@ -76,7 +76,7 @@ jobs:
           blocks.forEach((match, index) => Babel.transform(match[1], { presets: ["react"], sourceType: "script" }));
           console.log(`Validated ${blocks.length} JSX script block(s).`);
           const required = [
-            'const APP_VERSION = "2.0.1";',
+            'const APP_VERSION = "2.0.2";',
             'CLOUD_API_BASE',
             'CLOUD_SESSION_KEY',
             'cloudRequest("/api/auth/login"',
@@ -108,7 +108,7 @@ jobs:
           from pathlib import Path
           import os, re
           build_id = os.environ["GITHUB_SHA"][:7]
-          version = f"2.0.1+{build_id}"
+          version = f"2.0.2+{build_id}"
           html = Path("site/index.html")
           source = html.read_text(encoding="utf-8")
           source, count = re.subn(r'const APP_VERSION = "[^"]+";', f'const APP_VERSION = "{version}";', source, count=1)
@@ -124,7 +124,7 @@ jobs:
           print(f"Publishing version {version}")
           PY
           grep -q 'vendor/qrcode.min.js' site/index.html
-          grep -q 'alnoor-school-v2.0.1+' site/sw.js
+          grep -q 'alnoor-school-v2.0.2+' site/sw.js
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
@@ -132,7 +132,7 @@ jobs:
       - name: Upload website source bundle
         uses: actions/upload-artifact@v4
         with:
-          name: alnoor-school-2.0.1-website
+          name: alnoor-school-2.0.2-website
           path: site/
           if-no-files-found: error
           retention-days: 30
