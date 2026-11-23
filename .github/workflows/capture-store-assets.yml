@@ -76,7 +76,7 @@ jobs:
             execFileSync("git",["config","user.name","github-actions[bot]"]);
             execFileSync("git",["config","user.email","41898282+github-actions[bot]@users.noreply.github.com"]);
             execFileSync("git",["add","-f",out+"/icon-512.png",out+"/feature-graphic-1024x500.png","logo.png","logo-192.png","logo-512.png","apple-touch-icon.png"]);
-            if (execFileSync("git",["status","--porcelain"]).toString().trim()) { execFileSync("git",["commit","-m","Add Alnoor School brand and Play Store graphics"]); execFileSync("git",["push","origin","main"]); } else { console.log("Brand exports already committed; continuing."); }
+            const stagedBrand = execFileSync("git",["diff","--cached","--name-only"]).toString().trim(); console.log("Staged brand files:",stagedBrand || "(none)"); if (stagedBrand) { execFileSync("git",["commit","-m","Add Alnoor School brand and Play Store graphics"]); execFileSync("git",["push","origin","main"]); } else { console.log("Brand exports already committed; continuing."); }
 
             // The GITHUB_TOKEN push does not fan out ordinary push events, so dispatch the Pages workflow explicitly.
             const dispatch = await fetch("https://api.github.com/repos/"+repo+"/actions/workflows/deploy.yml/dispatches", {
