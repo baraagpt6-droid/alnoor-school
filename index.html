@@ -142,7 +142,130 @@
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
     }
-  </style>
+  
+    /* Alnoor 1.2.1 — polished bottom navigation and assistant surfaces */
+    .student-app-root { padding-bottom:calc(100px + env(safe-area-inset-bottom)) !important; }
+    .student-bottom-nav {
+      position:fixed !important; inset-inline:0 !important; bottom:0 !important;
+      z-index:930 !important; display:flex !important; align-items:stretch !important;
+      min-height:calc(78px + env(safe-area-inset-bottom)) !important;
+      padding:8px 6px calc(8px + env(safe-area-inset-bottom)) !important;
+      border:0 !important; border-top:1px solid rgba(229,184,75,.48) !important;
+      background:rgba(250,246,238,.94) !important;
+      -webkit-backdrop-filter:blur(22px) saturate(1.35) !important;
+      backdrop-filter:blur(22px) saturate(1.35) !important;
+      box-shadow:0 -8px 26px rgba(66,51,24,.10) !important;
+    }
+    html.dark .student-bottom-nav {
+      background:rgba(28,25,20,.94) !important;
+      border-top-color:rgba(229,184,75,.42) !important;
+      box-shadow:0 -8px 28px rgba(0,0,0,.28) !important;
+    }
+    .student-bottom-nav-inner {
+      width:100% !important; max-width:680px !important; margin:0 auto !important;
+      display:flex !important; flex-direction:row !important; flex-wrap:nowrap !important;
+      align-items:stretch !important; justify-content:space-between !important; gap:3px !important;
+    }
+    .student-bottom-nav button {
+      flex:1 1 0 !important; min-width:0 !important; max-width:none !important;
+      min-height:60px !important; padding:2px 1px !important; gap:2px !important;
+      border:0 !important; border-radius:15px !important; background:transparent !important;
+      opacity:1 !important; color:#6e685c !important;
+    }
+    html.dark .student-bottom-nav button { color:#B8B0A0 !important; }
+    .student-bottom-nav button > span[style] {
+      width:40px !important; height:40px !important; border-radius:50% !important;
+      display:flex !important; align-items:center !important; justify-content:center !important;
+      border:1px solid transparent !important; background:transparent !important;
+      box-shadow:none !important; transform:none !important; transition:background .2s ease,border-color .2s ease,box-shadow .2s ease !important;
+    }
+    .student-bottom-nav button > span[style] > span[aria-hidden="true"] { display:none !important; }
+    .student-bottom-nav button > span[style] svg { width:23px !important; height:23px !important; stroke:#6e685c !important; }
+    html.dark .student-bottom-nav button > span[style] svg { stroke:#B8B0A0 !important; }
+    .student-bottom-nav button[aria-current="page"] { background:transparent !important; }
+    .student-bottom-nav button[aria-current="page"] > span[style] {
+      background:radial-gradient(circle at 50% 35%,rgba(229,184,75,.26),rgba(229,184,75,.09)) !important;
+      border-color:rgba(229,184,75,.48) !important;
+      box-shadow:0 0 18px rgba(229,184,75,.18) !important;
+    }
+    .student-bottom-nav button[aria-current="page"] > span[style] svg { stroke:#3F5A2A !important; }
+    .student-bottom-nav button[aria-current="page"] > span:not([style]) { color:#3F5A2A !important; }
+    html.dark .student-bottom-nav button[aria-current="page"] > span[style] svg { stroke:#E5B84B !important; }
+    html.dark .student-bottom-nav button[aria-current="page"] > span:not([style]) { color:#E5B84B !important; }
+    .student-bottom-nav button > span:not([style]) {
+      display:block !important; max-width:100% !important; margin-top:1px !important;
+      white-space:nowrap !important; overflow:hidden !important; text-overflow:clip !important;
+      font-size:clamp(8px,2.45vw,10px) !important; line-height:1.2 !important;
+      font-weight:900 !important; color:#6e685c !important;
+    }
+    html.dark .student-bottom-nav button > span:not([style]) { color:#B8B0A0 !important; }
+    .student-bottom-nav button[aria-current="page"] > span:not([style]) { color:#3F5A2A !important; }
+    html.dark .student-bottom-nav button[aria-current="page"] > span:not([style]) { color:#E5B84B !important; }
+
+    .alnoor-ai-fab {
+      position:fixed !important; left:16px !important; right:auto !important;
+      bottom:calc(84px + env(safe-area-inset-bottom)) !important; z-index:980 !important;
+      min-height:48px !important; padding:11px 17px !important;
+      border:1px solid rgba(229,184,75,.65) !important; border-radius:999px !important;
+      background:linear-gradient(135deg,#F0D176 0%,#D6A83C 55%,#B98227 100%) !important;
+      color:#2B2418 !important; box-shadow:0 9px 26px rgba(104,74,18,.25),inset 0 1px 0 rgba(255,255,255,.45) !important;
+      z-index:980 !important; touch-action:manipulation !important;
+    }
+    .alnoor-ai-fab svg { stroke:#2B2418 !important; }
+    html:not(.dark) .alnoor-ai-fab {
+      background:linear-gradient(135deg,#536B35 0%,#3F5A2A 70%,#9A6F1E 100%) !important;
+      border-color:rgba(154,111,30,.65) !important; color:#FFF9EC !important;
+      box-shadow:0 9px 26px rgba(54,73,34,.24),inset 0 1px 0 rgba(255,255,255,.22) !important;
+    }
+    html:not(.dark) .alnoor-ai-fab svg { stroke:#FFF9EC !important; }
+    .alnoor-ai-backdrop {
+      position:fixed !important; inset:0 !important; z-index:1080 !important;
+      border:0 !important; background:rgba(13,12,10,.48) !important;
+      -webkit-backdrop-filter:blur(3px) !important; backdrop-filter:blur(3px) !important;
+    }
+    .alnoor-ai-panel {
+      position:fixed !important; left:50% !important; right:auto !important; bottom:0 !important;
+      transform:translateX(-50%) !important; width:min(100%,680px) !important;
+      max-width:680px !important; max-height:min(88dvh,760px) !important;
+      z-index:1090 !important; display:flex !important; flex-direction:column !important;
+      gap:12px !important; overflow-y:auto !important; overscroll-behavior:contain !important;
+      padding:10px 16px calc(18px + env(safe-area-inset-bottom)) !important;
+      margin:0 !important; border:1px solid rgba(229,184,75,.55) !important;
+      border-bottom:0 !important; border-radius:26px 26px 0 0 !important;
+      background:rgba(250,246,238,.98) !important; color:#2A2118 !important;
+      box-shadow:0 -18px 55px rgba(0,0,0,.25) !important;
+    }
+    html.dark .alnoor-ai-panel { background:rgba(28,25,20,.985) !important; color:#F6ECD2 !important; }
+    .ai-sheet-grabber { width:42px; height:4px; flex:0 0 auto; align-self:center; border-radius:99px; background:rgba(110,95,69,.38); margin:1px auto 2px; }
+    html.dark .ai-sheet-grabber { background:rgba(203,190,151,.42); }
+    .ai-sheet-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding-bottom:10px; border-bottom:1px solid var(--line); }
+    .ai-sheet-close { width:36px; height:36px; flex:0 0 auto; border-radius:50%; border:1px solid var(--line); background:var(--surface2); color:var(--ink); font-size:24px; line-height:1; }
+    .ai-sheet-shortcuts { padding:11px; border:1px solid var(--line); border-radius:17px; background:var(--surface); }
+    .ai-shortcut-button { min-height:42px; padding:8px 10px; border-radius:13px; border:1px solid rgba(154,111,30,.38); background:linear-gradient(135deg,rgba(229,184,75,.15),rgba(90,107,47,.07)); color:var(--ink); font-size:11px; font-weight:900; text-align:center; }
+    .ai-shortcut-button:disabled { opacity:.5; }
+    .ai-sheet-settings { flex:0 0 auto; padding:11px 13px; border:1px solid var(--line); border-radius:15px; background:var(--surface2); }
+    .ai-sheet-settings summary { cursor:pointer; font-size:11px; font-weight:900; color:var(--ink); }
+    .ai-sheet-history { display:flex; flex-direction:column; gap:9px; min-height:90px; max-height:32dvh; overflow-y:auto; padding:2px 1px; }
+    .ai-message { max-width:94%; padding:11px 12px; border-radius:16px; font-size:12px; line-height:1.8; font-weight:700; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .ai-message p { margin:0; }
+    .ai-message-assistant { align-self:flex-start; background:var(--surface2); color:var(--ink); border:1px solid var(--line); border-bottom-right-radius:5px; }
+    .ai-message-user { align-self:flex-end; background:#3F5A2A; color:#fff; border:1px solid rgba(229,184,75,.42); border-bottom-left-radius:5px; }
+    .ai-read-button { margin-top:7px; padding:5px 9px; border-radius:999px; border:1px solid var(--gold); background:var(--surface); color:var(--ink); font-size:10px; font-weight:900; }
+    .ai-thinking { align-self:flex-start; color:var(--muted); font-size:11px; font-weight:800; padding:4px 8px; }
+    .ai-sheet-composer { display:flex; flex:0 0 auto; gap:8px; align-items:center; padding-top:8px; border-top:1px solid var(--line); }
+    .ai-sheet-composer .input { flex:1 1 auto; min-width:0; }
+    .ai-send-button { flex:0 0 auto; min-height:42px; padding:8px 16px; border:1px solid rgba(229,184,75,.65); border-radius:13px; background:linear-gradient(135deg,#E5B84B,#B98227); color:#2A2118; font-size:12px; font-weight:900; }
+    .ai-send-button:disabled { opacity:.55; }
+    .demo-settings-note { padding:10px 12px; border-radius:13px; border:1px solid rgba(154,111,30,.35); background:rgba(154,111,30,.08); color:var(--muted); font-size:11px; line-height:1.8; font-weight:800; }
+    @media (max-width:380px) {
+      .student-bottom-nav { padding-inline:3px !important; }
+      .student-bottom-nav-inner { gap:1px !important; }
+      .student-bottom-nav button > span[style] { width:36px !important; height:36px !important; }
+      .student-bottom-nav button > span:not([style]) { font-size:8px !important; }
+      .alnoor-ai-fab { left:12px !important; padding:9px 13px !important; }
+      .alnoor-ai-panel { padding-inline:12px !important; }
+    }
+</style>
 </head>
 <body>
   <div id="instant-splash" class="instant-splash" role="status" aria-live="polite">
@@ -533,7 +656,7 @@
     ========================================================================= */
     const STORAGE_KEY = "alnoor_madrasti_v3_full";
     const AI_SETTINGS_KEY = "alnoor_ai_preferences_v1";
-    const APP_VERSION = "1.2.0";
+    const APP_VERSION = "1.2.1";
     const DEMO_CREDENTIALS = Object.freeze({
       student: Object.freeze({ id: "ST-101", secret: "1234" }),
       parent: Object.freeze({ id: "ST-101", secret: "771001100" }),
@@ -1515,6 +1638,22 @@ ${buildLocalAssistantReply(q)}
         }
       };
 
+      const speakAiReply = (value) => {
+        const text = String(value || "").trim().slice(0, 4000);
+        if (!text) return;
+        if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") {
+          setToast("ميزة القراءة الصوتية غير مدعومة في هذا المتصفح.");
+          return;
+        }
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = "ar-SA";
+        utterance.rate = 0.94;
+        const arabicVoice = window.speechSynthesis.getVoices().find((voice) => /^ar([_-]|$)/i.test(voice.lang || ""));
+        if (arabicVoice) utterance.voice = arabicVoice;
+        window.speechSynthesis.speak(utterance);
+      };
+
       const getGradeLabel = (total) => {
         if (total >= 90) return "ممتاز";
         if (total >= 80) return "جيد جداً";
@@ -1712,9 +1851,9 @@ ${buildLocalAssistantReply(q)}
       };
 
       const roleAiPrompts = {
-        student: ["لخّص لي الدرس الحالي", "اشرح الفكرة خطوة بخطوة", "أنشئ أسئلة تدريبية"],
+        student: ["اشرح لي الدرس الحالي", "اختبرني في هذه المادة", "ما هي واجباتي اليوم؟"],
         parent: ["اشرح طريقة حساب الدرجات", "كيف أتابع الواجبات؟"],
-        teacher: ["أنشئ أسئلة اختبار من الدرس", "اشرح فكرة الدرس للطلاب"],
+        teacher: ["حضّر خطة درس", "اقترح أسئلة اختبار"],
         admin: ["تقرير المدرسة العام", "حالة الإعلانات والطلاب"]
       };
 
@@ -2071,6 +2210,7 @@ ${buildLocalAssistantReply(q)}
                 {studentTab === "settings" && (
                   <div className="card p-4 space-y-4">
                     <h3 className="text-base font-black text-[#E8C84A]">إعدادات التطبيق وإمكانية الوصول</h3>
+                    <p className="demo-settings-note" role="note">نسخة تجريبية محلية. التغييرات محفوظة على هذا الجهاز فقط ولا تنتقل إلى أجهزة أخرى دون خادم مدرسي.</p>
                     <div className="flex items-center justify-between p-3 rounded-2xl bg-[var(--surface2)]">
                       <div>
                         <div className="text-sm font-black">الوضع الداكن (الافتراضي)</div>
@@ -2635,13 +2775,14 @@ ${buildLocalAssistantReply(q)}
             )}
 
           </main>
-          <div role="note" className={`demo-disclaimer-bar ${role === "student" ? "student-mode" : ""}`}>نسخة تجريبية محلية. التغييرات محفوظة على هذا الجهاز فقط ولا تنتقل إلى أجهزة أخرى دون خادم مدرسي.</div>
 
           {/* زر المساعد الذكي العائم (يظهر فقط بعد تسجيل الدخول ومخصص لكل دور) */}
           <button
             type="button"
             onClick={() => setAiOpen((o) => !o)}
-            className="alnoor-ai-fab px-3.5 py-2.5 rounded-full bg-gradient-to-l from-[#E8C84A] to-[#C9A227] text-[#2A2118] border-2 border-[#FFF9EC] shadow-2xl flex items-center gap-1.5 font-black text-xs hover:scale-105 transition-transform"
+            aria-expanded={aiOpen}
+            aria-label="فتح مساعد نور"
+            className="alnoor-ai-fab flex items-center gap-2 rounded-full font-black text-xs transition-transform hover:scale-105"
           >
             <SmartGlyph name="ai" size={18} color="#2A2118" />
             <span>مساعد نور</span>
@@ -2649,105 +2790,114 @@ ${buildLocalAssistantReply(q)}
 
           {/* نافذة المساعد الذكي المخصصة لكل دور */}
           {aiOpen && (
-            <div className="alnoor-ai-panel max-w-[520px] mx-auto card p-4 border-2 border-[#E8C84A] shadow-2xl space-y-3">
-              <div className="flex items-center justify-between border-b border-[var(--line)] pb-2">
-                <div className="flex items-center gap-2">
-                  <SmartEmojiBadge icon="ai" active size={34} />
-                  <div>
-                    <div className="text-xs font-black text-[#E8C84A]">مساعد نور التعليمي ({roleTitleMap[role]})</div>
-                    <div className="text-[10px] font-bold text-[var(--muted)]">يشرح الدروس ويولد تدريبات بحسب الصف المفتوح</div>
+            <>
+              <button type="button" className="alnoor-ai-backdrop" onClick={() => setAiOpen(false)} aria-label="إغلاق مساعد نور" />
+              <section className="alnoor-ai-panel card" role="dialog" aria-modal="true" aria-labelledby="alnoor-ai-title">
+                <div className="ai-sheet-grabber" aria-hidden="true" />
+                <div className="ai-sheet-header">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <SmartEmojiBadge icon="ai" active size={42} />
+                    <div className="min-w-0">
+                      <h2 id="alnoor-ai-title" className="text-sm font-black text-[var(--ink)]">مساعد نور</h2>
+                      <p className="text-[10px] font-bold text-[var(--muted)]">مساعدك التعليمي • {roleTitleMap[role]}</p>
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => setAiOpen(false)} className="ai-sheet-close" aria-label="إغلاق النافذة">×</button>
+                </div>
+
+                <div className="ai-sheet-shortcuts">
+                  <div className="text-[11px] font-black text-[var(--muted)] mb-2">اختصارات تناسب بوابتك</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(roleAiPrompts[role] || []).map((prompt, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        disabled={aiBusy}
+                        onClick={() => sendAiMessage(prompt)}
+                        className="ai-shortcut-button"
+                      >
+                        {prompt}
+                      </button>
+                    ))}
                   </div>
                 </div>
-                <button type="button" onClick={() => setAiOpen(false)} className="text-xs font-black px-2.5 py-1 rounded-lg bg-[var(--surface2)]">
-                  إغلاق
-                </button>
-              </div>
 
-              <details className="rounded-xl border border-[var(--line)] bg-[var(--surface2)] p-3">
-                <summary className="cursor-pointer text-xs font-black">إعدادات محرك المساعد الذكي</summary>
-                <div className="ai-settings-grid mt-3">
-                  <label>المحرك المستخدم
-                    <select className="input text-sm" value={aiSettings.provider} onChange={(event) => setAiSettings((prev) => ({ ...prev, provider: event.target.value }))}>
-                      <option value="local">محلي — دون إنترنت</option><option value="gemini">Google Gemini API</option><option value="groq">Groq API</option><option value="pollinations">Pollinations Pay — ربط الحساب</option>
-                    </select>
-                  </label>
-                  <label>مفتاح Gemini
-                    <input className="input text-sm" type="password" autoComplete="off" value={aiSettings.geminiKey} onChange={(event) => setAiSettings((prev) => ({ ...prev, geminiKey: event.target.value.trim() }))} placeholder="AIza..." />
-                  </label>
-                  <label>نموذج Gemini
-                    <input className="input text-sm" value={aiSettings.geminiModel} onChange={(event) => setAiSettings((prev) => ({ ...prev, geminiModel: event.target.value.trim() }))} placeholder="gemini-3.8-flash" />
-                  </label>
-                  <label>مفتاح Groq
-                    <input className="input text-sm" type="password" autoComplete="off" value={aiSettings.groqKey} onChange={(event) => setAiSettings((prev) => ({ ...prev, groqKey: event.target.value.trim() }))} placeholder="gsk_..." />
-                  </label>
-                  <label>معرّف نموذج Groq
-                    <input className="input text-sm" value={aiSettings.groqModel} onChange={(event) => setAiSettings((prev) => ({ ...prev, groqModel: event.target.value.trim() }))} placeholder="اختر نموذجاً متاحاً في حسابك" />
-                  </label>
-                  <label>معرّف تطبيق Pollinations العام (اختياري)
-                    <input className="input text-sm" type="text" autoComplete="off" value={aiSettings.pollinationsAppKey} onChange={(event) => setAiSettings((prev) => ({ ...prev, pollinationsAppKey: event.target.value.trim() }))} placeholder="pk_... (اختياري)" />
-                  </label>
-                  <label>معرّف نموذج Pollinations
-                    <input className="input text-sm" value={aiSettings.pollinationsModel} onChange={(event) => setAiSettings((prev) => ({ ...prev, pollinationsModel: event.target.value.trim() }))} placeholder="openai/gpt-5.4-nano" />
-                  </label>
-                  <div className="pwa-actions">
-                    <button type="button" className="btn btn-olive text-xs" onClick={handleConnectPollinations}>ربط حساب Pollinations بموافقتك</button>
-                    {pollinationsToken && <button type="button" className="btn btn-ghost text-xs" onClick={handleDisconnectPollinations}>فصل الحساب</button>}
+                <details className="ai-sheet-settings">
+                  <summary>إعدادات محرك المساعد الذكي</summary>
+                  <div className="ai-settings-grid mt-3">
+                    <label>المحرك المستخدم
+                      <select className="input text-sm" value={aiSettings.provider} onChange={(event) => setAiSettings((prev) => ({ ...prev, provider: event.target.value }))}>
+                        <option value="local">محلي — دون إنترنت</option><option value="gemini">Google Gemini API</option><option value="groq">Groq API</option><option value="pollinations">Pollinations Pay — ربط الحساب</option>
+                      </select>
+                    </label>
+                    <label>مفتاح Gemini
+                      <input className="input text-sm" type="password" autoComplete="off" value={aiSettings.geminiKey} onChange={(event) => setAiSettings((prev) => ({ ...prev, geminiKey: event.target.value.trim() }))} placeholder="AIza..." />
+                    </label>
+                    <label>نموذج Gemini
+                      <input className="input text-sm" value={aiSettings.geminiModel} onChange={(event) => setAiSettings((prev) => ({ ...prev, geminiModel: event.target.value.trim() }))} placeholder="gemini-3.8-flash" />
+                    </label>
+                    <label>مفتاح Groq
+                      <input className="input text-sm" type="password" autoComplete="off" value={aiSettings.groqKey} onChange={(event) => setAiSettings((prev) => ({ ...prev, groqKey: event.target.value.trim() }))} placeholder="gsk_..." />
+                    </label>
+                    <label>معرّف نموذج Groq
+                      <input className="input text-sm" value={aiSettings.groqModel} onChange={(event) => setAiSettings((prev) => ({ ...prev, groqModel: event.target.value.trim() }))} placeholder="اختر نموذجاً متاحاً في حسابك" />
+                    </label>
+                    <label>معرّف تطبيق Pollinations العام (اختياري)
+                      <input className="input text-sm" type="text" autoComplete="off" value={aiSettings.pollinationsAppKey} onChange={(event) => setAiSettings((prev) => ({ ...prev, pollinationsAppKey: event.target.value.trim() }))} placeholder="pk_... (اختياري)" />
+                    </label>
+                    <label>معرّف نموذج Pollinations
+                      <input className="input text-sm" value={aiSettings.pollinationsModel} onChange={(event) => setAiSettings((prev) => ({ ...prev, pollinationsModel: event.target.value.trim() }))} placeholder="openai/gpt-5.4-nano" />
+                    </label>
+                    <div className="pwa-actions">
+                      <button type="button" className="btn btn-olive text-xs" onClick={handleConnectPollinations}>ربط حساب Pollinations بموافقتك</button>
+                      {pollinationsToken && <button type="button" className="btn btn-ghost text-xs" onClick={handleDisconnectPollinations}>فصل الحساب</button>}
+                    </div>
+                    {pollinationsStatus && <p className="source-note" role="status">{pollinationsStatus}</p>}
+                    <div className="source-note">لا يوجد توليد Pollinations مجهول بلا مصادقة. زر الربط يستخدم OAuth مع PKCE ويملأ مبدئياً سقف إنفاق قدره 1 دولار ومدة صلاحية 7 أيام؛ يمكنك تعديل السقف أو إزالته أو رفض التفويض في شاشة Pollinations. التفويض خاص بهذا التبويب ولا يحفظ الرمز في localStorage. قد يتطلب رصيداً أو استخداماً مدفوعاً، لذلك لا نعده خدمة مجانية بلا حدود. معرّف pk_ اختياري وهو معرّف تطبيق عام لا مفتاح توليد.</div>
+                    <div className="source-note">المحرك المحلي قواعد تعليمية وإجابات مبنية على محتوى المنصة، وليس نموذجاً لغوياً كبيراً. عند فشل الاتصال الخارجي يرجع إليه تلقائياً.</div>
+                    <button type="button" className="btn btn-ghost text-xs" onClick={() => { handleDisconnectPollinations(); setAiSettings({ provider: "local", geminiKey: "", geminiModel: "gemini-3.8-flash", groqKey: "", groqModel: "", pollinationsAppKey: "", pollinationsModel: "openai/gpt-5.4-nano" }); }}>مسح المفاتيح والإعدادات وفصل Pollinations</button>
                   </div>
-                  {pollinationsStatus && <p className="source-note" role="status">{pollinationsStatus}</p>}
-                  <div className="source-note">لا يوجد توليد Pollinations مجهول بلا مصادقة. زر الربط يستخدم OAuth مع PKCE ويملأ مبدئياً سقف إنفاق قدره 1 دولار ومدة صلاحية 7 أيام؛ يمكنك تعديل السقف أو إزالته أو رفض التفويض في شاشة Pollinations. التفويض خاص بهذا التبويب ولا يحفظ الرمز في localStorage. قد يتطلب رصيداً أو استخداماً مدفوعاً، لذلك لا نعده خدمة مجانية بلا حدود. معرّف pk_ اختياري وهو معرّف تطبيق عام لا مفتاح توليد.</div>
-                  <div className="source-note">المحرك المحلي قواعد تعليمية وإجابات مبنية على محتوى المنصة، وليس نموذج لغوي كبيراً. عند فشل الاتصال الخارجي يرجع إليه تلقائياً.</div>
-                  <button type="button" className="btn btn-ghost text-xs" onClick={() => { handleDisconnectPollinations(); setAiSettings({ provider: "local", geminiKey: "", geminiModel: "gemini-3.8-flash", groqKey: "", groqModel: "", pollinationsAppKey: "", pollinationsModel: "openai/gpt-5.4-nano" }); }}>مسح المفاتيح والإعدادات وفصل Pollinations</button>
+                </details>
+
+                <div className="ai-sheet-history" role="log" aria-live="polite" aria-relevant="additions">
+                  {(aiHistoryByRole[role] || []).map((message, index) => (
+                    <article
+                      key={index}
+                      className={`ai-message ${message.sender === "ai" ? "ai-message-assistant" : "ai-message-user"}`}
+                    >
+                      <p>{message.text}</p>
+                      {message.sender === "ai" && (
+                        <button type="button" className="ai-read-button" onClick={() => speakAiReply(message.text)}>
+                          قراءة الرد صوتياً
+                        </button>
+                      )}
+                    </article>
+                  ))}
+                  {aiBusy && <div className="ai-thinking" role="status">مساعد نور يجهّز الرد...</div>}
                 </div>
-              </details>
 
-              <div className="max-h-44 overflow-y-auto space-y-2 text-xs">
-                {(aiHistoryByRole[role] || []).map((m, idx) => (
-                  <div
-                    key={idx}
-                    className={`p-2.5 rounded-2xl leading-5 font-bold ${
-                      m.sender === "ai"
-                        ? "bg-[var(--surface2)] text-[var(--ink)]"
-                        : "bg-[#5A6B2F] text-white mr-6"
-                    }`}
-                  >
-                    {m.text}
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex flex-wrap gap-1.5">
-                {(roleAiPrompts[role] || []).map((p, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => sendAiMessage(p)}
-                    className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[var(--surface2)] border border-[var(--gold)]"
-                  >
-                    {p}
+                <div className="ai-sheet-composer">
+                  <input
+                    type="text"
+                    maxLength={500}
+                    className="input !py-2 text-xs"
+                    placeholder="اكتب سؤالك للمساعد..."
+                    value={aiInput}
+                    onChange={(event) => setAiInput(event.target.value)}
+                    onKeyDown={(event) => event.key === "Enter" && sendAiMessage()}
+                    aria-label="رسالتك إلى مساعد نور"
+                  />
+                  <button type="button" disabled={aiBusy} onClick={() => sendAiMessage()} className="ai-send-button">
+                    {aiBusy ? "يفكر..." : "إرسال"}
                   </button>
-                ))}
-              </div>
-
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  maxLength={500}
-                  className="input !py-2 text-xs"
-                  placeholder="اكتب سؤالك للمساعد الذكي..."
-                  value={aiInput}
-                  onChange={(e) => setAiInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && sendAiMessage()}
-                />
-                <button type="button" disabled={aiBusy} onClick={() => sendAiMessage()} className="btn btn-gold !py-2 !px-4 !min-h-[40px] text-xs disabled:opacity-60">
-                  {aiBusy ? "يفكر..." : "إرسال"}
-                </button>
-              </div>
-            </div>
+                </div>
+              </section>
+            </>
           )}
 
           {/* شريط التنقل السفلي لبوابة الطالب (6 تبويبات متساوية الارتفاع بدون تداخل) */}
           {role === "student" && (
-            <nav aria-label="التنقل الرئيسي للطالب" className="student-bottom-nav bg-[var(--surface)]/95 backdrop-blur border-t border-[var(--gold)]">
+            <nav aria-label="التنقل الرئيسي للطالب" className="student-bottom-nav">
               <div className="student-bottom-nav-inner">
                 {studentTabsList.map((tab) => {
                   const isActive = studentTab === tab.id;

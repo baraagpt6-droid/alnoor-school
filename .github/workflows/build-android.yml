@@ -85,6 +85,21 @@ jobs:
           cp "$ASSET_DIR/logo-512.png" android/app/src/main/res/drawable-nodpi/ic_launcher.png
           for file in index.html styles.fixed.css logo.png manifest.json sw.js vendor/react.production.min.js vendor/react-dom.production.min.js vendor/babel.min.js vendor/three.min.js vendor/qrcode.min.js; do test -s "$ASSET_DIR/$file"; done
 
+      - name: Validate application JSX
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require("node:fs");
+          const Babel = require("./android/app/src/main/assets/www/vendor/babel.min.js");
+          const html = fs.readFileSync("android/app/src/main/assets/www/index.html", "utf8");
+          const blocks = [...html.matchAll(/<script\b[^>]*\btype=["']text\/babel["'][^>]*>([\s\S]*?)<\/script>/gi)];
+          if (!blocks.length) throw new Error("No JSX application script found.");
+          if (!Babel || typeof Babel.transform !== "function") throw new Error("Babel standalone did not load.");
+          blocks.forEach((match, index) => Babel.transform(match[1], { presets: ["react"], sourceType: "script" }));
+          console.log(`Validated ${blocks.length} JSX script block(s).`);
+          NODE
+
       - name: Build signed release APK
         working-directory: android
         env:
@@ -106,14 +121,14 @@ jobs:
           EXPECTED_CERT="054eeea383f75d177f6c7dfa1a55ad43dc2dbafb22253ab34f0c9d05778373e6"
           test "$ACTUAL_CERT" = "$EXPECTED_CERT"
           "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -v 4 "$APK"
-          cp "$APK" alnoor-school-1.2.0.apk
-          sha256sum alnoor-school-1.2.0.apk
+          cp "$APK" alnoor-school-1.2.1.apk
+          sha256sum alnoor-school-1.2.1.apk
           echo "APK signature and expected release certificate verified."
 
       - name: Upload signed APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: alnoor-school-1.2.0-signed-apk
-          path: alnoor-school-1.2.0.apk
+          name: alnoor-school-1.2.1-signed-apk
+          path: alnoor-school-1.2.1.apk
           if-no-files-found: error
           retention-days: 90
