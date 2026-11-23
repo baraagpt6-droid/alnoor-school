@@ -1,4 +1,4 @@
-name: Build Alnoor School Android APK 1.2.0
+name: Build Alnoor School Android APK (signed)
 
 on:
   push:
@@ -45,6 +45,29 @@ jobs:
         with:
           gradle-version: "8.9"
 
+      - name: Restore release signing key
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          : "${ANDROID_KEYSTORE_BASE64:?Missing repository secret ANDROID_KEYSTORE_BASE64}"
+          : "${ANDROID_KEYSTORE_PASSWORD:?Missing repository secret ANDROID_KEYSTORE_PASSWORD}"
+          : "${ANDROID_KEY_ALIAS:?Missing repository secret ANDROID_KEY_ALIAS}"
+          : "${ANDROID_KEY_PASSWORD:?Missing repository secret ANDROID_KEY_PASSWORD}"
+
+          KEYSTORE_PATH="$RUNNER_TEMP/alnoor-school-release.jks"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          chmod 600 "$KEYSTORE_PATH"
+          test -s "$KEYSTORE_PATH"
+          keytool -list -keystore "$KEYSTORE_PATH" -storetype JKS \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null
+          echo "ANDROID_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
+          echo "Release signing keystore restored and alias validated."
+
       - name: Package the website inside Android
         shell: bash
         run: |
@@ -62,26 +85,35 @@ jobs:
           cp "$ASSET_DIR/logo-512.png" android/app/src/main/res/drawable-nodpi/ic_launcher.png
           for file in index.html styles.fixed.css logo.png manifest.json sw.js vendor/react.production.min.js vendor/react-dom.production.min.js vendor/babel.min.js vendor/three.min.js vendor/qrcode.min.js; do test -s "$ASSET_DIR/$file"; done
 
-      - name: Build installable APK
+      - name: Build signed release APK
         working-directory: android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: gradle --no-daemon --stacktrace assembleRelease
 
-      - name: Verify APK and package ID
+      - name: Verify signed APK and certificate
         shell: bash
         run: |
           set -euo pipefail
-          APK="android/app/build/outputs/apk/release/app-release-unsigned.apk"
+          APK="android/app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
           unzip -t "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='com.alnoor.school'"
-          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -f 4 "$APK" alnoor-school-1.2.0-unsigned-aligned.apk
-          test -s alnoor-school-1.2.0-unsigned-aligned.apk
-          sha256sum alnoor-school-1.2.0-unsigned-aligned.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK" | tee "$RUNNER_TEMP/apk-signature.txt"
+          ACTUAL_CERT="$(awk '/Signer #1 certificate SHA-256 digest:/ {print tolower($NF); exit}' "$RUNNER_TEMP/apk-signature.txt")"
+          EXPECTED_CERT="054eeea383f75d177f6c7dfa1a55ad43dc2dbafb22253ab34f0c9d05778373e6"
+          test "$ACTUAL_CERT" = "$EXPECTED_CERT"
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -v 4 "$APK"
+          cp "$APK" alnoor-school-1.2.0.apk
+          sha256sum alnoor-school-1.2.0.apk
+          echo "APK signature and expected release certificate verified."
 
-      - name: Upload APK artifact
+      - name: Upload signed APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: alnoor-school-1.2.0-unsigned-apk
-          path: alnoor-school-1.2.0-unsigned-aligned.apk
+          name: alnoor-school-1.2.0-signed-apk
+          path: alnoor-school-1.2.0.apk
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 90
