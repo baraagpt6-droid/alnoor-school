@@ -93,7 +93,7 @@ jobs:
           const fs = require("node:fs");
           const Babel = require("./android/app/src/main/assets/www/vendor/babel.min.js");
           const html = fs.readFileSync("android/app/src/main/assets/www/index.html", "utf8");
-          const blocks = [...html.matchAll(/<script\\b[^>]*\\btype=["']text\\/babel["'][^>]*>([\\s\\S]*?)<\\/script>/gi)];
+          const blocks = [...html.matchAll(/<script\b[^>]*\btype=["']text\/babel["'][^>]*>([\s\S]*?)<\/script>/gi)];
           if (!blocks.length) throw new Error("No JSX application script found.");
           if (!Babel || typeof Babel.transform !== "function") throw new Error("Babel standalone did not load.");
           blocks.forEach((match, index) => Babel.transform(match[1], { presets: ["react"], sourceType: "script" }));
