@@ -1,0 +1,47 @@
+name: Alnoor School 2.0.1 Cloud API smoke test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/cloud-smoke.yml"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  health-and-cors:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check SchoolAPI health and database
+        shell: bash
+        run: |
+          set -euo pipefail
+          API="https://br-falling-rain-azmx7t48-schoolapi.compute.c-3.ap-southeast-1.aws.neon.tech"
+          BODY="$(curl --retry 3 --retry-delay 2 --connect-timeout 15 --max-time 30 -fsS "$API/api/health")"
+          echo "$BODY" | grep -F '"ok":true'
+          echo "$BODY" | grep -F '"database":"neondb"'
+          echo "SchoolAPI health and database connection passed."
+
+      - name: Check browser and Android CORS origins
+        shell: bash
+        run: |
+          set -euo pipefail
+          API="https://br-falling-rain-azmx7t48-schoolapi.compute.c-3.ap-southeast-1.aws.neon.tech"
+          for ORIGIN in \
+            "https://baraagpt6-droid.github.io" \
+            "http://localhost:5173" \
+            "http://localhost:8080" \
+            "capacitor://localhost" \
+            "ionic://localhost" \
+            "null"; do
+            HEADERS="$(curl --retry 2 --retry-delay 1 --connect-timeout 15 --max-time 30 -fsS -D - -o /dev/null -H "Origin: $ORIGIN" "$API/api/health")"
+            if [ "$ORIGIN" = "null" ]; then
+              echo "$HEADERS" | grep -qi "access-control-allow-origin: null"
+            else
+              echo "$HEADERS" | grep -qi "access-control-allow-origin: \\*"
+            fi
+            echo "CORS passed for Origin: $ORIGIN"
+          done

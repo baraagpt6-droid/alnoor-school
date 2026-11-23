@@ -1,4 +1,4 @@
-name: Deploy Alnoor School 2.0.1 cloud release
+name: Deploy Alnoor School 2.0.1 to GitHub Pages
 
 on:
   push:
