@@ -332,6 +332,16 @@
       body { background:#fff !important; color:#111 !important; }
     }
 </style>
+<script type="module">
+    (async () => {
+      try {
+        const module = await import("https://esm.sh/@neon/realtime@0.2.1/client");
+        window.AlnoorCreateRealtimeClient = module.createRealtimeClient;
+      } catch (error) {
+        console.warn("Neon Realtime module unavailable; periodic cloud sync will remain active.", error);
+      }
+    })();
+  </script>
 </head>
 <body>
   <div id="instant-splash" class="instant-splash" role="status" aria-live="polite">
@@ -722,7 +732,10 @@
     ========================================================================= */
     const STORAGE_KEY = "alnoor_madrasti_v3_full";
     const AI_SETTINGS_KEY = "alnoor_ai_preferences_v1";
-    const APP_VERSION = "1.3.0";
+    const APP_VERSION = "2.0.0";
+    const CLOUD_API_BASE = "https://br-falling-rain-azmx7t48-schoolapi.compute.c-3.ap-southeast-1.aws.neon.tech";
+    const CLOUD_REALTIME_URL = "https://ep-nameless-lake-azw1q6rt.rt.c-3.ap-southeast-1.aws.neon.tech/";
+    const CLOUD_SESSION_KEY = "alnoor_cloud_session_v2";
     const DEMO_CREDENTIALS = Object.freeze({
       student: Object.freeze({ id: "ST-101", secret: "1234" }),
       parent: Object.freeze({ id: "ST-101", secret: "771001100" }),
@@ -1017,6 +1030,27 @@
 
     function App() {
       const [data, setData] = useState(loadDemoData);
+      const [cloudSession, setCloudSession] = useState(() => {
+        try { return JSON.parse(localStorage.getItem(CLOUD_SESSION_KEY) || "null"); } catch { return null; }
+      });
+      const [cloudStatus, setCloudStatus] = useState(navigator.onLine ? "checking" : "offline");
+      const [cloudLastSync, setCloudLastSync] = useState("");
+      const [cloudRetry, setCloudRetry] = useState(0);
+      const [previewMode, setPreviewMode] = useState(false);
+      const [mustChangePassword, setMustChangePassword] = useState(false);
+      const [currentPassword, setCurrentPassword] = useState("");
+      const [newPassword, setNewPassword] = useState("");
+      const [confirmNewPassword, setConfirmNewPassword] = useState("");
+      const [passwordChangeBusy, setPasswordChangeBusy] = useState(false);
+      const [seedBusy, setSeedBusy] = useState(false);
+      const [seedCredentials, setSeedCredentials] = useState([]);
+      const [cloudAccountForm, setCloudAccountForm] = useState({role:"teacher",login_id:"",display_name:"",student_id:"",grade:""});
+      const [cloudAccountBusy, setCloudAccountBusy] = useState(false);
+      const [issuedCloudAccount, setIssuedCloudAccount] = useState(null);
+      const previousCloudDataRef = useRef(null);
+      const suppressCloudPushRef = useRef(false);
+      const cloudPullBusyRef = useRef(false);
+      const cloudRealtimeClientRef = useRef(null);
 
       const [darkMode, setDarkMode] = useState(true);
       const [fontScale, setFontScale] = useState("normal");
@@ -1099,9 +1133,104 @@
         try {
           window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
         } catch (error) {
-          console.warn("تعذر حفظ التغييرات المحلية التجريبية.", error);
+          console.warn("تعذر حفظ نسخة العمل المحلية.", error);
         }
       }, [data]);
+
+      useEffect(() => {
+        try {
+          if (cloudSession?.token) localStorage.setItem(CLOUD_SESSION_KEY, JSON.stringify(cloudSession));
+          else localStorage.removeItem(CLOUD_SESSION_KEY);
+        } catch (error) { console.warn("تعذر حفظ جلسة السحابة على هذا الجهاز.", error); }
+      }, [cloudSession]);
+
+      // Restore a valid cloud session, then hydrate the local offline-first cache.
+      useEffect(() => {
+        if (!cloudSession?.token) { if (cloudStatus === "checking") setCloudStatus("offline"); return; }
+        let cancelled = false;
+        (async () => {
+          try {
+            const me = await cloudRequest("/api/me", { token: cloudSession.token });
+            if (cancelled) return;
+            setCloudSession((previous) => previous ? { ...previous, user: me.user, must_change_password: me.user.must_change_password } : previous);
+            setRole(me.user.role);
+            if (me.user.student_id) setActiveStudentId(me.user.student_id);
+            setMustChangePassword(Boolean(me.user.must_change_password));
+            await pullCloudSnapshot(cloudSession);
+          } catch (error) {
+            if (cancelled) return;
+            if (error.status === 401) {
+              localStorage.removeItem(CLOUD_SESSION_KEY);
+              setCloudSession(null);
+              setRole(null);
+              setCloudStatus("expired");
+            } else setCloudStatus("pending");
+          }
+        })();
+        return () => { cancelled = true; };
+      // Runs once on mount: this must not switch users when local state changes.
+      }, []);
+
+      const localSyncKeys = ["students","lessons","assignments","announcements","parentMessages","attendanceRecords","scheduleByGrade"];
+      useEffect(() => {
+        if (!cloudSession?.token || previewMode) { previousCloudDataRef.current = data; return; }
+        if (suppressCloudPushRef.current) {
+          suppressCloudPushRef.current = false;
+          previousCloudDataRef.current = data;
+          return;
+        }
+        const previous = previousCloudDataRef.current || {};
+        const changes = {};
+        for (const key of localSyncKeys) {
+          if (JSON.stringify(previous[key]) !== JSON.stringify(data[key])) changes[key] = data[key];
+        }
+        if (!Object.keys(changes).length) return;
+        const timer = window.setTimeout(async () => {
+          const ok = await pushCloudChanges(changes, cloudSession);
+          if (ok) previousCloudDataRef.current = data;
+        }, 800);
+        return () => window.clearTimeout(timer);
+      }, [data, cloudSession, previewMode, cloudRetry]);
+
+      useEffect(() => {
+        const onOnline = () => {
+          setCloudStatus(cloudSession?.token ? "syncing" : "online");
+          setCloudRetry((value) => value + 1);
+          if (cloudSession?.token) pullCloudSnapshot(cloudSession).catch(() => {});
+        };
+        const onOffline = () => setCloudStatus("offline");
+        window.addEventListener("online", onOnline);
+        window.addEventListener("offline", onOffline);
+        return () => { window.removeEventListener("online", onOnline); window.removeEventListener("offline", onOffline); };
+      }, [cloudSession?.token]);
+
+      // Neon Realtime notifications refresh an authenticated snapshot; periodic pull is the fallback.
+      useEffect(() => {
+        if (!cloudSession?.token || previewMode) return;
+        let closed = false, client = null, subscription = null;
+        const refresh = () => pullCloudSnapshot(cloudSession).catch(() => {});
+        const poll = window.setInterval(refresh, 20000);
+        (async () => {
+          try {
+            if (typeof window.AlnoorCreateRealtimeClient !== "function") return;
+            const seal = await cloudRequest("/api/realtime/seal", { method:"POST", body:{}, token:cloudSession.token });
+            if (closed) return;
+            client = window.AlnoorCreateRealtimeClient({ url: CLOUD_REALTIME_URL });
+            cloudRealtimeClientRef.current = client;
+            subscription = client.subscribe(seal.sealed);
+            subscription.onChange(() => refresh());
+            subscription.onStateChange((state) => { if (state.status === "error") setCloudStatus("pending"); });
+          } catch (error) {
+            console.warn("Realtime subscription unavailable; periodic sync remains active.", error);
+          }
+        })();
+        return () => {
+          closed = true;
+          window.clearInterval(poll);
+          try { subscription?.unsubscribe?.(); client?.close?.(); } catch {}
+          cloudRealtimeClientRef.current = null;
+        };
+      }, [cloudSession?.token, previewMode]);
 
       useEffect(() => {
         const splash = document.getElementById("instant-splash");
@@ -1188,6 +1317,139 @@
           setToast("");
           toastTimerRef.current = null;
         }, 2600);
+      };
+
+      const cloudRequest = async (path, options = {}) => {
+        const headers = new Headers(options.headers || {});
+        headers.set("Accept", "application/json");
+        if (options.body !== undefined) headers.set("Content-Type", "application/json");
+        const token = options.token ?? cloudSession?.token;
+        if (token) headers.set("Authorization", `Bearer ${token}`);
+        const response = await fetch(CLOUD_API_BASE + path, {
+          method: options.method || "GET",
+          headers,
+          body: options.body === undefined ? undefined : JSON.stringify(options.body),
+          cache: "no-store"
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const error = new Error(result.error || `Cloud API ${response.status}`);
+          error.status = response.status;
+          error.code = result.code;
+          throw error;
+        }
+        return result;
+      };
+
+      const applyCloudSnapshot = (snapshot) => {
+        if (!snapshot || typeof snapshot !== "object") return;
+        suppressCloudPushRef.current = true;
+        setData((previous) => ({
+          ...previous,
+          students: Array.isArray(snapshot.students) ? snapshot.students : previous.students,
+          assignments: Array.isArray(snapshot.assignments) ? snapshot.assignments : previous.assignments,
+          announcements: Array.isArray(snapshot.announcements) ? snapshot.announcements : previous.announcements,
+          parentMessages: Array.isArray(snapshot.parentMessages) ? snapshot.parentMessages : previous.parentMessages,
+          scheduleByGrade: snapshot.scheduleByGrade && typeof snapshot.scheduleByGrade === "object" ? snapshot.scheduleByGrade : previous.scheduleByGrade,
+          attendanceRecords: Array.isArray(snapshot.attendanceRecords) ? snapshot.attendanceRecords : previous.attendanceRecords,
+          lessons: Array.isArray(snapshot.lessons) ? snapshot.lessons : previous.lessons
+        }));
+        setCloudLastSync(new Date().toLocaleTimeString("ar"));
+        setCloudStatus("online");
+        previousCloudDataRef.current = data;
+      };
+
+      const pullCloudSnapshot = async (session = cloudSession) => {
+        if (!session?.token || cloudPullBusyRef.current || !navigator.onLine) return null;
+        cloudPullBusyRef.current = true;
+        try {
+          const snapshot = await cloudRequest("/api/sync/pull", { method: "POST", body: {}, token: session.token });
+          applyCloudSnapshot(snapshot);
+          return snapshot;
+        } catch (error) {
+          setCloudStatus(error.status === 401 ? "expired" : "pending");
+          if (error.status === 401) {
+            localStorage.removeItem(CLOUD_SESSION_KEY);
+            setCloudSession(null);
+            setRole(null);
+            notify("انتهت جلسة الدخول. سجّل الدخول من جديد.");
+          }
+          throw error;
+        } finally {
+          cloudPullBusyRef.current = false;
+        }
+      };
+
+      const pushCloudChanges = async (changes, session = cloudSession) => {
+        if (!session?.token || !navigator.onLine || !Object.keys(changes).length) return false;
+        setCloudStatus("syncing");
+        try {
+          await cloudRequest("/api/sync/push", { method: "POST", body: { changes }, token: session.token });
+          setCloudStatus("online");
+          setCloudLastSync(new Date().toLocaleTimeString("ar"));
+          return true;
+        } catch (error) {
+          console.warn("Cloud sync pending; local copy remains available.", error);
+          setCloudStatus(error.status === 401 ? "expired" : "pending");
+          if (error.status === 401) {
+            localStorage.removeItem(CLOUD_SESSION_KEY);
+            setCloudSession(null);
+            setRole(null);
+          }
+          return false;
+        }
+      };
+
+      const changeSchoolPassword = async () => {
+        if (!currentPassword || newPassword.length < 12 || newPassword !== confirmNewPassword) {
+          notify("تحقق من كلمة المرور الجديدة. يجب أن تتكون من 12 خانة وتتطابق في الحقلين.");
+          return;
+        }
+        setPasswordChangeBusy(true);
+        try {
+          await cloudRequest("/api/auth/change-password", {
+            method: "POST",
+            body: { current_password: currentPassword, new_password: newPassword }
+          });
+          setMustChangePassword(false);
+          setCloudSession((previous) => previous ? { ...previous, must_change_password: false } : previous);
+          setCurrentPassword(""); setNewPassword(""); setConfirmNewPassword("");
+          notify("تم تغيير كلمة المرور. يمكنك استخدام النظام الآن.");
+        } catch (error) {
+          notify(error.message || "تعذر تغيير كلمة المرور.");
+        } finally { setPasswordChangeBusy(false); }
+      };
+
+      const seedSchoolCloud = async () => {
+        if (!cloudSession?.token || cloudSession.user?.role !== "admin") return;
+        setSeedBusy(true);
+        try {
+          const result = await cloudRequest("/api/admin/seed-defaults", {
+            method: "POST", body: { data: INITIAL_DATA }
+          });
+          setSeedCredentials(result.issued_accounts || []);
+          await pullCloudSnapshot(cloudSession);
+          notify("تم تهيئة البيانات الافتراضية وإصدار حسابات الدخول.");
+        } catch (error) {
+          if (error.status === 409) notify("تمت تهيئة البيانات سابقاً. استخدم المزامنة لتحديث السجلات.");
+          else notify(error.message || "تعذرت تهيئة بيانات المدرسة.");
+        } finally { setSeedBusy(false); }
+      };
+
+      const createSchoolAccount = async () => {
+        if (!cloudAccountForm.login_id.trim() || !cloudAccountForm.display_name.trim()) {
+          notify("أدخل المعرّف والاسم أولاً."); return;
+        }
+        setCloudAccountBusy(true);
+        try {
+          const result = await cloudRequest("/api/admin/accounts", {
+            method: "POST", body: cloudAccountForm
+          });
+          setIssuedCloudAccount(result.account);
+          setCloudAccountForm({role:"teacher",login_id:"",display_name:"",student_id:"",grade:""});
+          notify("تم إنشاء الحساب. احفظ كلمة المرور المؤقتة ووزعها لصاحبها.");
+        } catch (error) { notify(error.message || "تعذر إنشاء الحساب."); }
+        finally { setCloudAccountBusy(false); }
       };
 
       const currentStudent = useMemo(
