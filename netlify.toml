@@ -1,0 +1,33 @@
+[build]
+  command = "bash .github/scripts/build-netlify.sh"
+  publish = "site"
+
+[build.environment]
+  NODE_VERSION = "24"
+
+# Revalidate the app shell on every visit so the service worker can detect updates.
+[[headers]]
+  for = "/"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Client-side navigation fallback. Existing static files are served before this rule.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
