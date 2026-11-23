@@ -35,6 +35,7 @@ jobs:
           API="https://br-falling-rain-azmx7t48-schoolapi.compute.c-3.ap-southeast-1.aws.neon.tech"
           for ORIGIN in \
             "https://baraagpt6-droid.github.io" \
+            "https://alnoor-school.netlify.app" \
             "http://localhost:5173" \
             "http://localhost:8080" \
             "capacitor://localhost" \
@@ -69,7 +70,7 @@ jobs:
           for ROLE in admin teacher student parent; do
             LOGIN_ID="$(jq -r ".$ROLE.id" "$RUNNER_TEMP/alnoor-demo-credentials.json")"
             PASSWORD="$(jq -r ".$ROLE.password" "$RUNNER_TEMP/alnoor-demo-credentials.json")"
-            BODY="$(jq -n --arg id "$LOGIN_ID" --arg role "$ROLE" --arg password "$PASSWORD" '{login_id:$id,role:$role,password:$password}' | curl --retry 2 --retry-delay 1 --connect-timeout 15 --max-time 30 -fsS -H 'Content-Type: application/json' -d @- "$API/api/auth/login")"
+            BODY="$(jq -n --arg id "$LOGIN_ID" --arg role "$ROLE" --arg password "$PASSWORD" '{login_id:$id,role:$role,password:$password}' | curl --retry 2 --retry-delay 1 --connect-timeout 15 --max-time 30 -fsS -H 'Origin: https://alnoor-school.netlify.app' -H 'Content-Type: application/json' -d @- "$API/api/auth/login")"
             TOKEN="$(echo "$BODY" | jq -r '.token // empty')"
             test -n "$TOKEN"
             ME="$(curl --retry 2 --retry-delay 1 --connect-timeout 15 --max-time 30 -fsS -H "Authorization: Bearer $TOKEN" "$API/api/me")"
