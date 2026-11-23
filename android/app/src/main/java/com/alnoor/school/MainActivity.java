@@ -1,176 +1,120 @@
 package com.alnoor.school;
 
 import android.app.Activity;
-import android.app.DownloadManager;
-import android.content.Context;
-import android.net.Uri;
 import android.os.Bundle;
-import android.os.Message;
+import android.os.Handler;
+import android.os.SystemClock;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
 import android.webkit.CookieManager;
-import android.webkit.DownloadListener;
-import android.webkit.URLUtil;
 import android.webkit.WebChromeClient;
-import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
-import android.widget.ProgressBar;
-import android.widget.Toast;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.view.animation.AlphaAnimation;
 
 public class MainActivity extends Activity {
-    private static final String HOME_URL = "https://baraagpt6-droid.github.io/alnoor-school/";
     private WebView webView;
-    private ProgressBar progressBar;
+    private View splash;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getWindow().setStatusBarColor(0xFF221B12);
-        getWindow().setNavigationBarColor(0xFF221B12);
+        getWindow().setStatusBarColor(Color.rgb(34,27,18));
+        getWindow().setNavigationBarColor(Color.rgb(34,27,18));
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
-
         FrameLayout root = new FrameLayout(this);
-        root.setBackgroundColor(0xFF221B12);
-
+        root.setBackgroundColor(Color.rgb(34,27,18));
         webView = new WebView(this);
-        webView.setBackgroundColor(0xFF221B12);
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
-        settings.setJavaScriptCanOpenWindowsAutomatically(true);
-        settings.setSupportMultipleWindows(false);
+        settings.setLoadsImagesAutomatically(true);
         settings.setLoadWithOverviewMode(true);
         settings.setUseWideViewPort(true);
         settings.setMediaPlaybackRequiresUserGesture(true);
-        settings.setAllowFileAccess(false);
+        settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-
-        CookieManager cookies = CookieManager.getInstance();
-        cookies.setAcceptCookie(true);
-        cookies.setAcceptThirdPartyCookies(webView, true);
-
+        CookieManager.getInstance().setAcceptCookie(true);
+        webView.setWebChromeClient(new WebChromeClient());
         webView.setWebViewClient(new WebViewClient() {
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                Uri uri = request.getUrl();
-                String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase();
-                if ("http".equals(scheme) || "https".equals(scheme)) {
-                    return false;
-                }
-                try {
-                    startActivity(android.content.Intent.createChooser(
-                            new android.content.Intent(android.content.Intent.ACTION_VIEW, uri),
-                            "فتح باستخدام"));
-                } catch (Exception ignored) {
-                    Toast.makeText(MainActivity.this, "لا يوجد تطبيق لفتح هذا الرابط", Toast.LENGTH_SHORT).show();
-                }
-                return true;
+            @Override public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                hideSplashWhenReady(view);
             }
         });
-
-        webView.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public void onProgressChanged(WebView view, int newProgress) {
-                progressBar.setProgress(newProgress);
-                progressBar.setVisibility(newProgress >= 100 ? View.GONE : View.VISIBLE);
-            }
-
-            @Override
-            public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
-                WebView.HitTestResult hit = view.getHitTestResult();
-                String target = hit == null ? null : hit.getExtra();
-                if (target != null && (target.startsWith("https://") || target.startsWith("http://"))) {
-                    view.loadUrl(target);
-                }
-                return false;
-            }
-        });
-
-        webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) -> {
-            try {
-                DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
-                request.setMimeType(mimeType);
-                request.addRequestHeader("User-Agent", userAgent);
-                String cookie = CookieManager.getInstance().getCookie(url);
-                if (cookie != null) request.addRequestHeader("Cookie", cookie);
-                request.setTitle("تنزيل من مدرسة النور");
-                request.setDescription("جارٍ تنزيل الملف");
-                request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-                request.setDestinationInExternalPublicDir(android.os.Environment.DIRECTORY_DOWNLOADS,
-                        URLUtil.guessFileName(url, contentDisposition, mimeType));
-                DownloadManager manager = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
-                manager.enqueue(request);
-                Toast.makeText(this, "بدأ تنزيل الملف", Toast.LENGTH_SHORT).show();
-            } catch (Exception e) {
-                Toast.makeText(this, "تعذر تنزيل الملف", Toast.LENGTH_LONG).show();
-            }
-        });
-
-        root.addView(webView, new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
-
-        progressBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
-        progressBar.setMax(100);
-        progressBar.setProgressTintList(android.content.res.ColorStateList.valueOf(0xFFDDAA36));
-        progressBar.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(0xFFDDAA36));
-        FrameLayout.LayoutParams progressParams = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT, dp(3), Gravity.TOP);
-        root.addView(progressBar, progressParams);
-
+        root.addView(webView, new FrameLayout.LayoutParams(-1, -1));
+        splash = buildSplash();
+        root.addView(splash, new FrameLayout.LayoutParams(-1, -1));
         setContentView(root);
-        if (savedInstanceState == null) {
-            webView.loadUrl(HOME_URL);
-        } else {
-            webView.restoreState(savedInstanceState);
-        }
+        if (savedInstanceState == null) webView.loadUrl("file:///android_asset/www/index.html");
+        else webView.restoreState(savedInstanceState);
     }
 
-    private int dp(int value) {
-        return Math.round(value * getResources().getDisplayMetrics().density);
+    private void hideSplashWhenReady(WebView view) {
+        final long started = SystemClock.elapsedRealtime();
+        final Handler handler = new Handler(getMainLooper());
+        final Runnable[] check = new Runnable[1];
+        check[0] = () -> {
+            if (splash == null) return;
+            view.evaluateJavascript("document.getElementById('root') && document.getElementById('root').children.length > 0 ? 'ready' : 'waiting'", value -> {
+                boolean ready = value != null && value.contains("ready") && !value.contains("waiting");
+                boolean timeout = SystemClock.elapsedRealtime() - started > 10000;
+                if (ready || timeout) {
+                    AlphaAnimation fade = new AlphaAnimation(1f, 0f);
+                    fade.setDuration(260);
+                    splash.startAnimation(fade);
+                    splash.setVisibility(View.GONE);
+                    splash = null;
+                } else {
+                    handler.postDelayed(check[0], 100);
+                }
+            });
+        };
+        handler.post(check[0]);
     }
 
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        if (webView != null) webView.saveState(outState);
-        super.onSaveInstanceState(outState);
+    private View buildSplash() {
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setGravity(Gravity.CENTER);
+        layout.setPadding(dp(24), dp(24), dp(24), dp(24));
+        GradientDrawable bg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{Color.rgb(74,55,27), Color.rgb(34,27,18)});
+        layout.setBackground(bg);
+        ImageView logo = new ImageView(this);
+        logo.setImageResource(com.alnoor.school.R.drawable.ic_launcher);
+        logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        LinearLayout.LayoutParams imageParams = new LinearLayout.LayoutParams(dp(116), dp(116));
+        imageParams.bottomMargin = dp(14);
+        layout.addView(logo, imageParams);
+        TextView title = new TextView(this);
+        title.setText("مدرسة النور");
+        title.setTextColor(Color.rgb(240,210,94));
+        title.setTextSize(28);
+        title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        layout.addView(title);
+        TextView subtitle = new TextView(this);
+        subtitle.setText("المنصة التعليمية الذكية");
+        subtitle.setTextColor(Color.rgb(229,212,168));
+        subtitle.setTextSize(13);
+        LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(-2, -2);
+        textParams.topMargin = dp(6);
+        layout.addView(subtitle, textParams);
+        return layout;
     }
 
-    @Override
-    public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
-        }
-    }
-
-    @Override
-    protected void onPause() {
-        if (webView != null) webView.onPause();
-        super.onPause();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if (webView != null) webView.onResume();
-    }
-
-    @Override
-    protected void onDestroy() {
-        if (webView != null) {
-            webView.stopLoading();
-            webView.setWebChromeClient(null);
-            webView.setWebViewClient(null);
-            webView.destroy();
-            webView = null;
-        }
-        super.onDestroy();
-    }
+    private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
+    @Override protected void onSaveInstanceState(Bundle out) { if (webView != null) webView.saveState(out); super.onSaveInstanceState(out); }
+    @Override public void onBackPressed() { if (webView != null && webView.canGoBack()) webView.goBack(); else super.onBackPressed(); }
+    @Override protected void onDestroy() { if (webView != null) { webView.stopLoading(); webView.setWebChromeClient(null); webView.setWebViewClient(null); webView.destroy(); webView = null; } super.onDestroy(); }
 }

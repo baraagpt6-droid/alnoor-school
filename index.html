@@ -1,0 +1,2782 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#221b12" />
+  <meta name="description" content="منصة مدرسة النور التعليمية لطلاب عزلة شباع ومديرية حبيش" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" href="./logo-192.png" type="image/png" />
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+  <title>مدرسة النور — المنصة التعليمية الذكية</title>
+  <style>
+    #instant-splash { position:fixed; inset:0; z-index:10000; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; background:radial-gradient(circle at 50% 35%, #4a371b 0%, #221b12 62%); color:#f0d25e; text-align:center; padding:24px; font-family:system-ui,sans-serif; }
+    #instant-splash img { width:112px; height:112px; object-fit:contain; }
+    #instant-splash .boot-title { font-size:28px; font-weight:900; }
+    #instant-splash .boot-subtitle { color:#e5d4a8; font-size:12px; font-weight:700; }
+    #instant-splash.splash-hidden { opacity:0; visibility:hidden; pointer-events:none; transition:opacity .28s ease,visibility .28s ease; }
+  </style>
+  <script defer src="./vendor/react.production.min.js"></script>
+  <script defer src="./vendor/react-dom.production.min.js"></script>
+  <script defer src="./vendor/babel.min.js"></script>
+  <script defer src="./vendor/three.min.js"></script>
+  <script defer src="./vendor/qrcode.min.js"></script>
+  <link rel="stylesheet" href="./styles.fixed.css" />
+  <style>
+    :root {
+      --paper: #f3ead8;
+      --surface: #fff9ec;
+      --surface2: #e8dcc3;
+      --ink: #2a2118;
+      --muted: #6e5f45;
+      --brown: #8a4a22;
+      --brown2: #6e3a1a;
+      --gold: #c9a227;
+      --gold2: #e8c84a;
+      --olive: #5a6b2f;
+      --olive2: #7a8a44;
+      --line: #d8c69e;
+      --danger: #8a4a22;
+      --ok: #5a6b2f;
+    }
+    html.dark {
+      color-scheme: dark;
+      --paper: #221b12;
+      --surface: #2e2517;
+      --surface2: #3d3120;
+      --ink: #f6ecd2;
+      --muted: #cbbe97;
+      --line: #57482f;
+      --gold: #e2be3a;
+      --gold2: #f0d25e;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html { direction: rtl; font-family: "Tajawal", system-ui, sans-serif; }
+    body { margin: 0; background: var(--paper); color: var(--ink); overflow-x: clip; }
+    .font-display { font-family: "Amiri", "Tajawal", serif; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 26px;
+      box-shadow: 0 10px 24px rgba(42, 33, 24, 0.14);
+    }
+    .btn {
+      border: 0;
+      border-radius: 16px;
+      padding: 13px 18px;
+      font-weight: 900;
+      cursor: pointer;
+      min-height: 48px;
+      font-size: 15px;
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-gold { background: linear-gradient(180deg, var(--gold2), var(--gold)); color: #2a2118; }
+    .btn-brown { background: var(--brown); color: #fff8e6; }
+    .btn-olive { background: var(--olive); color: #ffffff; }
+    .btn-ghost { background: var(--surface2); color: var(--ink); border: 1px solid var(--line); }
+    .input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1.5px solid var(--line);
+      border-radius: 14px;
+      padding: 13px 15px;
+      color: var(--ink);
+      font-size: 15px;
+      outline: none;
+    }
+    .input:focus { border-color: var(--gold); }
+    @keyframes spinSlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .spin-slow { animation: spinSlow 18s linear infinite; }
+    @keyframes pulseBadge {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+    .badge-pulse { animation: pulseBadge 2.4s ease-in-out infinite; }
+    @keyframes burstWave {
+      0% { transform: scale(0.85); opacity: 0.9; }
+      100% { transform: scale(1.7); opacity: 0; }
+    }
+    .burst-ring { animation: burstWave 0.55s ease-out forwards; }
+    .school-notice { border: 1px solid var(--gold); background: color-mix(in srgb, var(--surface2) 88%, var(--gold)); color: var(--ink); }
+    .curriculum-tools { display: grid; gap: .65rem; }
+    .curriculum-filters { display: flex; gap: .45rem; flex-wrap: wrap; }
+    .curriculum-filters button { border: 1px solid var(--line); border-radius: 999px; padding: .42rem .8rem; background: var(--surface2); color: var(--ink); font-size: .78rem; font-weight: 800; }
+    .curriculum-filters button[aria-pressed="true"] { background: var(--olive); color: #fff; border-color: var(--gold); }
+    .source-note { border-right: 3px solid var(--gold); padding: .65rem .8rem; background: var(--surface2); border-radius: .7rem; color: var(--muted); font-size: .78rem; line-height: 1.7; }
+    .pwa-actions { display: flex; gap: .6rem; flex-wrap: wrap; }
+    .ai-settings-grid { display: grid; gap: .65rem; }
+    .ai-settings-grid label { display: grid; gap: .3rem; font-size: .78rem; font-weight: 800; }
+    .ai-settings-grid input, .ai-settings-grid select { width: 100%; }
+    .btn:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid var(--gold2); outline-offset: 2px; }
+
+    .instant-splash { position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:14px; padding:24px; background:radial-gradient(circle at 50% 35%, #4a371b 0%, #221b12 62%); color:#f0d25e; opacity:1; visibility:visible; transition:opacity .28s ease, visibility .28s ease; }
+    .instant-splash img { width:112px; height:112px; object-fit:contain; filter:drop-shadow(0 10px 24px rgba(226,190,58,.22)); }
+    .instant-splash-title { font:900 28px/1.4 "Tajawal",system-ui,sans-serif; }
+    .instant-splash-subtitle { color:#e5d4a8; font:700 12px/1.8 "Tajawal",system-ui,sans-serif; }
+    .instant-splash.splash-hidden { opacity:0; visibility:hidden; pointer-events:none; }
+    .instant-splash-error { color:#f7df9a; font:700 12px/1.8 "Tajawal",system-ui,sans-serif; text-align:center; }
+    .demo-disclaimer-bar { position:fixed; left:50%; transform:translateX(-50%); bottom:6px; z-index:850; width:min(calc(100% - 24px),640px); padding:5px 9px; border:1px solid rgba(226,190,58,.5); border-radius:10px; background:rgba(34,27,18,.92); color:#f2e6c8; font:700 9px/1.45 "Tajawal",system-ui,sans-serif; text-align:center; pointer-events:none; }
+    .demo-disclaimer-bar.student-mode { left:auto; right:8px; transform:none; width:calc(100% - 124px); bottom:calc(78px + env(safe-area-inset-bottom)); }
+    .app-toast { position:fixed; left:50%; bottom:calc(34px + env(safe-area-inset-bottom)); transform:translateX(-50%); z-index:1200; width:max-content; max-width:calc(100vw - 24px); padding:8px 13px; border-radius:999px; background:#49602d; color:white; border:1px solid #e8c84a; box-shadow:0 8px 24px #0005; font-size:11px; font-weight:900; text-align:center; pointer-events:none; }
+    .app-toast.student-mode { bottom:calc(132px + env(safe-area-inset-bottom)); }
+    .student-app-root { padding-bottom:calc(95px + env(safe-area-inset-bottom)) !important; }
+    .student-bottom-nav { position:fixed !important; bottom:0 !important; left:0 !important; right:0 !important; display:flex !important; flex-direction:row !important; justify-content:space-around !important; align-items:stretch !important; z-index:900 !important; min-height:calc(72px + env(safe-area-inset-bottom)); padding:7px 4px calc(7px + env(safe-area-inset-bottom)) !important; pointer-events:auto !important; }
+    .student-bottom-nav-inner { width:100%; max-width:680px; margin:0 auto; display:flex !important; flex-direction:row !important; flex-wrap:nowrap !important; justify-content:space-around !important; align-items:stretch !important; gap:2px !important; }
+    .student-bottom-nav button { display:flex !important; flex:1 1 0 !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; min-width:0 !important; max-width:none !important; padding:3px 1px !important; border:0; background:transparent; }
+    .student-bottom-nav button span { max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:clip; font-size:clamp(8px,2.4vw,10px) !important; line-height:1.15; }
+    .alnoor-ai-fab { position:fixed !important; bottom:calc(85px + env(safe-area-inset-bottom)) !important; left:16px !important; right:auto !important; z-index:1000 !important; pointer-events:auto !important; touch-action:manipulation; }
+    .alnoor-ai-panel { position:fixed !important; left:12px !important; right:12px !important; bottom:calc(145px + env(safe-area-inset-bottom)) !important; z-index:1001 !important; max-height:min(68dvh,560px) !important; overflow-y:auto !important; overscroll-behavior:contain; pointer-events:auto !important; }
+    .alnoor-student-id { display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; border:1px solid var(--gold); border-radius:18px; padding:14px; background:linear-gradient(135deg,var(--surface),var(--surface2)); }
+    .alnoor-student-id-qr { width:112px; min-width:112px; height:112px; display:grid; place-items:center; background:#fff; border-radius:12px; padding:7px; }
+    .alnoor-student-id-qr svg { width:100%; height:100%; display:block; }
+    .alnoor-quiz-option[aria-pressed="true"] { border-color:var(--gold) !important; background:rgba(90,107,47,.28) !important; }
+    .attendance-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(112px,132px); gap:8px; align-items:center; padding:9px; border-radius:12px; background:var(--surface2); }
+    .attendance-row select { min-width:0; padding:9px 7px; font-size:12px; }
+    @media (max-width:380px) { .student-bottom-nav { padding-inline:2px !important; } .student-bottom-nav button span { font-size:8px !important; } .student-bottom-nav button svg { width:26px !important; height:26px !important; } .alnoor-ai-fab { left:10px !important; padding:8px 10px !important; } }
+    @media (min-width:640px) { .alnoor-student-id { flex-wrap:nowrap; } }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div id="instant-splash" class="instant-splash" role="status" aria-live="polite">
+    <img src="./logo-512.png" width="112" height="112" alt="شعار مدرسة النور" fetchpriority="high" />
+    <div class="instant-splash-title boot-title">مدرسة النور</div>
+    <div class="instant-splash-subtitle boot-subtitle">المنصة التعليمية الذكية</div>
+    <div id="instant-splash-status" class="instant-splash-subtitle boot-subtitle">يجري فتح التطبيق...</div>
+  </div>
+  <div id="root"></div>
+  <script>
+    window.setTimeout(function(){
+      var splash=document.getElementById('instant-splash');
+      var status=document.getElementById('instant-splash-status');
+      if(splash && !splash.classList.contains('splash-hidden')){
+        if(status) status.textContent='تعذر بدء الواجهة تلقائياً. أعد فتح التطبيق بعد التحقق من ملفات الإصدار.';
+      }
+    },15000);
+  </script>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useMemo } = React;
+
+    /* =========================================================================
+       1. الشعار الرسمي لمدرسة النور (SchoolEmblemSVG) المطابق للهوية المرفقة
+    ========================================================================= */
+    function SchoolEmblemSVG({ size = 84 }) {
+      return (
+        <img
+          src="./logo.png"
+          width={size}
+          height={size}
+          alt="شعار مدرسة النور"
+          decoding="async"
+          style={{ width: size, height: size, objectFit: "contain" }}
+        />
+      );
+    }
+
+    /* =========================================================================
+       2. نظام الأيقونات والإيموجيهات الذكية المتجهة (SmartGlyph & SmartEmojiBadge)
+    ========================================================================= */
+    function SmartGlyph({ name = "book", size = 22, color = "#E8C84A" }) {
+      const common = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" };
+      switch (name) {
+        case "student":
+          return <svg {...common}><path d="M22 10L12 5L2 10L12 15L22 10Z" fill="#5A6B2F" /><path d="M6 12.5V17C6 18.8 8.7 20 12 20C15.3 20 18 18.8 18 17V12.5" /></svg>;
+        case "parent":
+          return <svg {...common}><circle cx="9" cy="8" r="3.2" fill="#8A4A22" /><circle cx="16.5" cy="9.5" r="2.5" /><path d="M3.5 19C3.5 15.8 6 14 9 14C12 14 14.5 15.8 14.5 19" /><path d="M14 19C14 16.8 15.3 15.5 17 15.5C18.8 15.5 20.5 16.8 20.5 19" /></svg>;
+        case "teacher":
+          return <svg {...common}><rect x="3" y="4" width="18" height="12" rx="2" fill="#5A6B2F" /><path d="M8 20H16" /><path d="M12 16V20" /><path d="M7 9H13" /></svg>;
+        case "admin":
+          return <svg {...common}><path d="M12 3L4 7V12C4 16.8 7.4 20.6 12 21.8C16.6 20.6 20 16.8 20 12V7L12 3Z" fill="#8A4A22" /><path d="M9.5 12L11.2 13.7L14.8 10" /></svg>;
+        case "lab3d":
+          return <svg {...common}><polygon points="12 2 21 7 21 17 12 22 3 17 3 7 12 2" fill="#5A6B2F" /><polyline points="3.3 7 12 12 20.7 7" /><line x1="12" y1="22" x2="12" y2="12" /></svg>;
+        case "tasks":
+          return <svg {...common}><rect x="4" y="3" width="16" height="18" rx="3" fill="#8A4A22" /><path d="M8.5 9.5L10.5 11.5L15.5 7.5" /><line x1="8.5" y1="15" x2="15.5" y2="15" /></svg>;
+        case "grades":
+          return <svg {...common}><rect x="3" y="3" width="18" height="18" rx="3" fill="#5A6B2F" /><line x1="8" y1="16" x2="8" y2="11" /><line x1="12" y1="16" x2="12" y2="8" /><line x1="16" y1="16" x2="16" y2="13" /></svg>;
+        case "trophy":
+          return <svg {...common}><path d="M7 4H17V10C17 12.8 14.8 15 12 15C9.2 15 7 12.8 7 10V4Z" fill="#C9A227" /><path d="M7 6H4C4 9 5.5 10.5 7 10.5" /><path d="M17 6H20C20 9 18.5 10.5 17 10.5" /><path d="M9 20H15" /><path d="M12 15V20" /></svg>;
+        case "school":
+          return <svg {...common}><path d="M3 10L12 4L21 10" /><rect x="5" y="10" width="14" height="10" rx="1.5" fill="#5A6B2F" /><rect x="10" y="14" width="4" height="6" /></svg>;
+        case "settings":
+          return <svg {...common}><circle cx="12" cy="12" r="3.2" fill="#8A4A22" /><path d="M12 2V4.5M12 19.5V22M4.9 4.9L6.7 6.7M17.3 17.3L19.1 19.1M2 12H4.5M19.5 12H22M4.9 19.1L6.7 17.3M17.3 6.7L19.1 4.9" /></svg>;
+        case "ai":
+          return <svg {...common}><rect x="4" y="6" width="16" height="12" rx="4" fill="#2A2118" /><circle cx="9.5" cy="12" r="1.3" fill="#E8C84A" /><circle cx="14.5" cy="12" r="1.3" fill="#E8C84A" /><path d="M12 3V6" /></svg>;
+        case "sound":
+          return <svg {...common}><polygon points="5 9 9 9 14 5 14 19 9 15 5 15 5 9" fill="#C9A227" /><path d="M17.5 8.5C19 10.3 19 13.7 17.5 15.5" /></svg>;
+        case "star":
+          return <svg {...common}><polygon points="12 2 15.1 8.3 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 8.9 8.3 12 2" fill="#E8C84A" /></svg>;
+        case "lock":
+          return <svg {...common}><rect x="5" y="11" width="14" height="10" rx="2.5" fill="#8A4A22" /><path d="M8 11V7.5C8 5.3 9.8 3.5 12 3.5C14.2 3.5 16 5.3 16 7.5V11" /></svg>;
+        default:
+          return <svg {...common}><path d="M4 5.5C4 4.7 4.7 4 5.5 4H11C11.6 4 12 4.4 12 5V19C12 18.4 11.6 18 11 18H5.5C4.7 18 4 17.3 4 16.5V5.5Z" fill="#5A6B2F" /><path d="M20 5.5C20 4.7 19.3 4 18.5 4H13C12.4 4 12 4.4 12 5V19C12 18.4 12.4 18 13 18H18.5C19.3 18 20 17.3 20 16.5V5.5Z" fill="#8A4A22" /></svg>;
+      }
+    }
+
+    function SmartEmojiBadge({ icon = "book", active = false, size = 44, onClick, label = "أيقونة" }) {
+      const [burst, setBurst] = useState(false);
+      const timerRef = useRef(null);
+
+      useEffect(() => () => {
+        if (timerRef.current) window.clearTimeout(timerRef.current);
+      }, []);
+
+      const trigger = (event) => {
+        if (!onClick) return;
+        setBurst(true);
+        if (timerRef.current) window.clearTimeout(timerRef.current);
+        timerRef.current = window.setTimeout(() => {
+          setBurst(false);
+          timerRef.current = null;
+        }, 550);
+        onClick(event);
+      };
+
+      const className = `relative shrink-0 rounded-2xl flex items-center justify-center select-none transition-transform duration-200 ${
+        active
+          ? "bg-gradient-to-br from-[#5A6B2F] to-[#3A2C1C] border-2 border-[#E8C84A] shadow-lg scale-105"
+          : "bg-[var(--surface2)] border border-[var(--gold)]"
+      } ${onClick ? "cursor-pointer hover:scale-105" : "cursor-default"}`;
+
+      const content = (
+        <>
+          {burst && <span aria-hidden="true" className="absolute inset-0 rounded-2xl border-2 border-[#E8C84A] burst-ring pointer-events-none" />}
+          <SmartGlyph name={icon} size={Math.round(size * 0.54)} color={active ? "#F0D25E" : "#E8C84A"} />
+          <span aria-hidden="true" className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border border-[#2A2118] ${active ? "bg-[#E8C84A] badge-pulse" : "bg-[#7A8A44]"}`} />
+        </>
+      );
+
+      if (onClick) {
+        return <button type="button" aria-label={label} onClick={trigger} style={{ width: size, height: size }} className={className}>{content}</button>;
+      }
+      return <span aria-hidden="true" style={{ width: size, height: size }} className={className}>{content}</span>;
+    }
+
+    /* =========================================================================
+       3. المختبر ثلاثي الأبعاد التفاعلي الحقيقي (Three.js 3D Interactive Lab)
+    ========================================================================= */
+    function Interactive3DLab({ modelType = "solar", autoRotate = true }) {
+      const mountRef = useRef(null);
+      const autoRotateRef = useRef(autoRotate);
+      autoRotateRef.current = autoRotate;
+      const [webglError, setWebglError] = useState(false);
+      const [selectedPart, setSelectedPart] = useState("اسحب بإصبعك أو الفأرة لتدوير المجسم 360°");
+
+      const partDescriptions = {
+        solar: [
+          "الشمس: نجم يقع في مركز المجموعة الشمسية ويمثل 99.8% من كتلتها.",
+          "الأرض: الكوكب الثالث من حيث البعد عن الشمس والوحيد المعروف بوجود حياة.",
+          "زحل: يتميز بحلقاته الجليدية والصخرية الواسعة حول خط استوائه."
+        ],
+        geometry: [
+          "المكعب المنتظم: مجسم هندسي له 6 أوجه مربعة متطابقة و12 حرفاً و8 رؤوس.",
+          "الهرم الرباعي: قاعدة مربعة وأربعة أوجه مثلثية تلتقي في قمة واحدة.",
+          "الكرة الهندسية: سطح متماثل تبعد جميع نقاطه مسافة ثابتة عن المركز."
+        ],
+        cell: [
+          "النواة: مركز التحكم الخلوي وتحتوي على المادة الوراثية (DNA).",
+          "الميتوكوندريا: مصنع الطاقة في الخلية المسؤولة عن التنفس الخلوي.",
+          "الغشاء البلازمي: غلاف مرن ينظم مرور المواد من وإلى الخلية."
+        ]
+      };
+
+      useEffect(() => {
+        const container = mountRef.current;
+        if (!container) return;
+        if (!window.THREE) {
+          setWebglError(true);
+          return;
+        }
+
+        let renderer;
+        try {
+          const width = Math.max(container.clientWidth || 320, 1);
+          const height = 230;
+          const scene = new THREE.Scene();
+          const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+          camera.position.z = 5.4;
+
+          renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+          renderer.setSize(width, height);
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+          renderer.domElement.setAttribute("aria-label", "مجسم تعليمي ثلاثي الأبعاد قابل للتدوير. استخدم أسهم لوحة المفاتيح لتغيير زاوية العرض.");
+          renderer.domElement.setAttribute("role", "img");
+          renderer.domElement.setAttribute("tabindex", "0");
+          renderer.domElement.style.touchAction = "none";
+          container.replaceChildren(renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0xfff9ec, 0.95);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xf0d25e, 1.3);
+        dirLight.position.set(5, 6, 7);
+        scene.add(dirLight);
+
+        const group = new THREE.Group();
+        scene.add(group);
+
+        if (modelType === "solar") {
+          const sun = new THREE.Mesh(
+            new THREE.SphereGeometry(0.95, 32, 32),
+            new THREE.MeshStandardMaterial({ color: 0xe8c84a, emissive: 0xc9a227, emissiveIntensity: 0.45 })
+          );
+          group.add(sun);
+
+          const orbit1 = new THREE.Mesh(
+            new THREE.RingGeometry(1.65, 1.69, 48),
+            new THREE.MeshBasicMaterial({ color: 0xd8c69e, side: THREE.DoubleSide })
+          );
+          orbit1.rotation.x = Math.PI / 2.4;
+          group.add(orbit1);
+
+          const earth = new THREE.Mesh(
+            new THREE.SphereGeometry(0.34, 24, 24),
+            new THREE.MeshStandardMaterial({ color: 0x5a6b2f, roughness: 0.4 })
+          );
+          earth.position.set(1.67, 0.2, 0);
+          group.add(earth);
+
+          const saturn = new THREE.Mesh(
+            new THREE.SphereGeometry(0.45, 24, 24),
+            new THREE.MeshStandardMaterial({ color: 0xb07a3a })
+          );
+          saturn.position.set(-2.2, -0.25, 0.4);
+          const ring = new THREE.Mesh(
+            new THREE.RingGeometry(0.58, 0.85, 32),
+            new THREE.MeshBasicMaterial({ color: 0xf0d25e, side: THREE.DoubleSide })
+          );
+          ring.rotation.x = Math.PI / 3;
+          saturn.add(ring);
+          group.add(saturn);
+        } else if (modelType === "geometry") {
+          const cube = new THREE.Mesh(
+            new THREE.BoxGeometry(1.55, 1.55, 1.55),
+            new THREE.MeshStandardMaterial({ color: 0x5a6b2f, roughness: 0.35 })
+          );
+          const wire = new THREE.LineSegments(
+            new THREE.EdgesGeometry(new THREE.BoxGeometry(1.58, 1.58, 1.58)),
+            new THREE.LineBasicMaterial({ color: 0xf0d25e })
+          );
+          cube.add(wire);
+          cube.position.x = -1.15;
+          group.add(cube);
+
+          const cone = new THREE.Mesh(
+            new THREE.ConeGeometry(0.95, 1.75, 4),
+            new THREE.MeshStandardMaterial({ color: 0x8a4a22, roughness: 0.4 })
+          );
+          cone.position.x = 1.25;
+          group.add(cone);
+        } else {
+          const membrane = new THREE.Mesh(
+            new THREE.SphereGeometry(1.75, 28, 28),
+            new THREE.MeshStandardMaterial({ color: 0x5a6b2f, transparent: true, opacity: 0.38 })
+          );
+          group.add(membrane);
+          const nucleus = new THREE.Mesh(
+            new THREE.SphereGeometry(0.68, 24, 24),
+            new THREE.MeshStandardMaterial({ color: 0x8a4a22 })
+          );
+          group.add(nucleus);
+          const mito = new THREE.Group();
+          const mitoMaterial = new THREE.MeshStandardMaterial({ color: 0xe8c84a });
+          const mitoBody = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.55, 16), mitoMaterial);
+          const mitoTop = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 10), mitoMaterial);
+          const mitoBottom = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 10), mitoMaterial);
+          mitoTop.position.y = 0.275;
+          mitoBottom.position.y = -0.275;
+          mito.add(mitoBody, mitoTop, mitoBottom);
+          mito.position.set(0.95, 0.55, 0.4);
+          mito.rotation.z = 0.7;
+          group.add(mito);
+        }
+
+        let isDragging = false;
+        let prevX = 0;
+        let prevY = 0;
+        let activePointerId = null;
+        let animId = 0;
+        const dom = renderer.domElement;
+
+        const onPointerDown = (event) => {
+          isDragging = true;
+          activePointerId = event.pointerId;
+          prevX = event.clientX;
+          prevY = event.clientY;
+          try { dom.setPointerCapture(event.pointerId); } catch (_) {}
+        };
+        const onPointerMove = (event) => {
+          if (!isDragging || event.pointerId !== activePointerId) return;
+          const dx = event.clientX - prevX;
+          const dy = event.clientY - prevY;
+          group.rotation.y += dx * 0.012;
+          group.rotation.x += dy * 0.012;
+          prevX = event.clientX;
+          prevY = event.clientY;
+        };
+        const onPointerUp = (event) => {
+          if (event.pointerId !== activePointerId) return;
+          isDragging = false;
+          activePointerId = null;
+        };
+        const onKeyDown = (event) => {
+          const step = 0.12;
+          if (event.key === "ArrowLeft") group.rotation.y -= step;
+          else if (event.key === "ArrowRight") group.rotation.y += step;
+          else if (event.key === "ArrowUp") group.rotation.x -= step;
+          else if (event.key === "ArrowDown") group.rotation.x += step;
+          else return;
+          event.preventDefault();
+        };
+        dom.addEventListener("keydown", onKeyDown);
+        dom.addEventListener("pointerdown", onPointerDown);
+        dom.addEventListener("pointermove", onPointerMove);
+        dom.addEventListener("pointerup", onPointerUp);
+        dom.addEventListener("pointercancel", onPointerUp);
+        dom.addEventListener("lostpointercapture", onPointerUp);
+
+        const resize = () => {
+          const nextWidth = Math.max(container.clientWidth || 320, 1);
+          camera.aspect = nextWidth / 230;
+          camera.updateProjectionMatrix();
+          renderer.setSize(nextWidth, 230);
+        };
+        let resizeObserver = null;
+        if (typeof ResizeObserver !== "undefined") {
+          resizeObserver = new ResizeObserver(resize);
+          resizeObserver.observe(container);
+        } else {
+          window.addEventListener("resize", resize);
+        }
+
+        const animate = () => {
+          animId = requestAnimationFrame(animate);
+          if (autoRotateRef.current && !isDragging) group.rotation.y += 0.008;
+          renderer.render(scene, camera);
+        };
+        animate();
+
+        return () => {
+          cancelAnimationFrame(animId);
+          if (resizeObserver) resizeObserver.disconnect();
+          else window.removeEventListener("resize", resize);
+          dom.removeEventListener("keydown", onKeyDown);
+          dom.removeEventListener("pointerdown", onPointerDown);
+          dom.removeEventListener("pointermove", onPointerMove);
+          dom.removeEventListener("pointerup", onPointerUp);
+          dom.removeEventListener("pointercancel", onPointerUp);
+          dom.removeEventListener("lostpointercapture", onPointerUp);
+          scene.traverse((object) => {
+            if (object.geometry && typeof object.geometry.dispose === "function") object.geometry.dispose();
+            if (object.material) {
+              const materials = Array.isArray(object.material) ? object.material : [object.material];
+              materials.forEach((material) => material && typeof material.dispose === "function" && material.dispose());
+            }
+          });
+          scene.clear();
+          renderer.dispose();
+          if (typeof renderer.forceContextLoss === "function") renderer.forceContextLoss();
+          if (dom.parentNode === container) container.removeChild(dom);
+        };
+        } catch (error) {
+          console.error("تعذر تشغيل مختبر WebGL", error);
+          setWebglError(true);
+          return undefined;
+        }
+      }, [modelType]);
+
+      const notes = partDescriptions[modelType] || partDescriptions.solar;
+
+      return (
+        <div className="rounded-2xl border border-[var(--gold)] bg-[#1f1810] p-3 space-y-2.5">
+          <div className="flex items-center justify-between text-xs font-bold text-[#F0D25E]">
+            <span className="flex items-center gap-1.5">
+              <SmartGlyph name="lab3d" size={16} color="#F0D25E" />
+              مختبر المحاكاة ثلاثي الأبعاد (3D)
+            </span>
+            <span className="px-2 py-0.5 rounded-full bg-[#3d3120] text-[#f6ecd2]">تفاعلي باللمس</span>
+          </div>
+          {webglError ? (
+            <div role="status" className="w-full min-h-[120px] rounded-xl p-4 flex items-center justify-center text-center text-sm font-bold text-[#F6ECD2] bg-[#2a2118]">
+              تعذر تشغيل العرض ثلاثي الأبعاد على هذا الجهاز. يمكنك متابعة شرح الدرس من النصوص.
+            </div>
+          ) : (
+            <div ref={mountRef} className="w-full h-[230px] rounded-xl overflow-hidden cursor-grab active:cursor-grabbing bg-gradient-to-b from-[#2a2118] to-[#17120c]" />
+          )}
+          <div className="flex flex-wrap gap-1.5">
+            {notes.map((n, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setSelectedPart(n)}
+                className="text-xs font-bold px-2.5 py-1.5 rounded-xl bg-[var(--surface2)] text-[var(--ink)] border border-[var(--line)] hover:border-[var(--gold)]"
+              >
+                عنصر {idx + 1}
+              </button>
+            ))}
+          </div>
+          <div className="text-xs leading-6 p-2.5 rounded-xl bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)] font-bold">
+            {selectedPart}
+          </div>
+        </div>
+      );
+    }
+
+    /* =========================================================================
+       4. البيانات الأولية الكاملة للمنصة (الطلاب، الدروس، الواجبات، الإعلانات)
+    ========================================================================= */
+    const STORAGE_KEY = "alnoor_madrasti_v3_full";
+    const AI_SETTINGS_KEY = "alnoor_ai_preferences_v1";
+    const APP_VERSION = "1.2.0";
+    const DEMO_CREDENTIALS = Object.freeze({
+      student: Object.freeze({ id: "ST-101", secret: "1234" }),
+      parent: Object.freeze({ id: "ST-101", secret: "771001100" }),
+      teacher: Object.freeze({ id: "TCH-01", secret: "1111" }),
+      admin: Object.freeze({ id: "ADM-01", secret: "0000" })
+    });
+    const CURRICULUM_BOOKS_URL = "https://meoh.gov.ye/services/subjects/";
+    const MINISTRY_ELEARNING_URL = "https://e-learning-moe.edu.ye/book.php";
+    const CURRICULUM_GRADES = [
+      "الصف الأول الأساسي", "الصف الثاني الأساسي", "الصف الثالث الأساسي",
+      "الصف الرابع الأساسي", "الصف الخامس الأساسي", "الصف السادس الأساسي",
+      "الصف السابع الأساسي", "الصف الثامن الأساسي", "الصف التاسع الأساسي",
+      "الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"
+    ];
+    const CURRICULUM_SUBJECTS = [
+      "القرآن الكريم وعلومه", "التربية الإسلامية", "اللغة العربية", "الرياضيات",
+      "العلوم والحياة", "الدراسات الاجتماعية", "اللغة الإنجليزية"
+    ];
+    const WEEK_DAYS = ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
+    function createDefaultWeeklySchedule() {
+      return Object.fromEntries(CURRICULUM_GRADES.map((grade, gradeIndex) => [
+        grade,
+        WEEK_DAYS.map((day, dayIndex) => ({
+          day,
+          classes: Array.from({ length: 4 }, (_, period) => CURRICULUM_SUBJECTS[(gradeIndex + dayIndex + period) % CURRICULUM_SUBJECTS.length]).join(" • ")
+        }))
+      ]));
+    }
+    function attendancePercentForStudent(records, studentId, fallback = 0) {
+      const statuses = (Array.isArray(records) ? records : [])
+        .map((record) => record && record.entries && record.entries[studentId])
+        .filter((status) => ["present", "absent", "late"].includes(status));
+      if (!statuses.length) return Number(fallback) || 0;
+      const attended = statuses.filter((status) => status === "present" || status === "late").length;
+      return Math.round((attended / statuses.length) * 100);
+    }
+    function recalculateAttendanceStudents(students, records) {
+      return (students || []).map((student) => ({
+        ...student,
+        attendance: attendancePercentForStudent(records, student.id, student.attendance)
+      }));
+    }
+    function buildDefaultLessonQuiz(lesson) {
+      const sentences = Array.isArray(lesson?.sentences) ? lesson.sentences : [];
+      const answer = sentences[0]?.text || `يتناول درس ${lesson?.title || "هذا الدرس"} موضوعاً تعليمياً من مادة ${lesson?.subject || "المادة"}.`;
+      const distractor = sentences[0]?.hint || sentences[1]?.text || "هذه العبارة لا تصف الفكرة الرئيسة للدرس.";
+      return [{
+        id: `AUTO-${lesson?.id || "LESSON"}`,
+        question: `أي عبارة مما يلي تعبّر عن محتوى درس «${lesson?.title || "الدرس"}»؟`,
+        options: [answer, distractor, "لا تتعلق أي من العبارتين بموضوع الدرس."],
+        correctIndex: 0,
+        xp: 10
+      }];
+    }
+    const CURRICULUM_NOTICE = "هيكل الصفوف والمواد مهيأ للمنهج اليمني. الكتب الرسمية مرتبطة من بوابة وزارة التربية، أما الدروس النموذجية داخل المنصة فهي عينات تعليمية أولية تحتاج مراجعة المعلم بحسب طبعة الكتاب والخطة المعتمدة.";
+    function createMarksForGrade(grade, existing = {}) {
+      return CURRICULUM_SUBJECTS.map((subject) => {
+        const score = existing[subject] || [0, 0];
+        return { subject, termWork: Math.max(0, Math.min(40, Number(score[0]) || 0)), finalExam: Math.max(0, Math.min(60, Number(score[1]) || 0)) };
+      });
+    }
+    function loadAiSettings() {
+      const empty = { provider: "local", geminiKey: "", geminiModel: "gemini-3.8-flash", groqKey: "", groqModel: "", pollinationsAppKey: "", pollinationsModel: "openai/gpt-5.4-nano" };
+      try {
+        const saved = JSON.parse(localStorage.getItem(AI_SETTINGS_KEY) || "null");
+        if (!saved || typeof saved !== "object") return empty;
+        const normalized = {
+          ...empty,
+          ...saved,
+          pollinationsAppKey: typeof saved.pollinationsAppKey === "string" ? saved.pollinationsAppKey : "",
+          pollinationsModel: typeof saved.pollinationsModel === "string" ? saved.pollinationsModel : empty.pollinationsModel,
+          provider: ["local", "gemini", "groq", "pollinations"].includes(saved.provider) ? saved.provider : "local"
+        };
+        delete normalized.pollinationsKey;
+        return normalized;
+      } catch { return empty; }
+    }
+    function randomBase64Url(byteLength = 32) {
+      const bytes = new Uint8Array(byteLength);
+      crypto.getRandomValues(bytes);
+      let binary = "";
+      bytes.forEach((value) => { binary += String.fromCharCode(value); });
+      return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+    }
+    const STARTER_CURRICULUM_LESSONS = [
+      { id: "YEM-G01-AR", grade: CURRICULUM_GRADES[0], subject: "اللغة العربية", title: "الحروف والكلمات الأولى", modelType: "geometry", xp: 10, source: "نموذج تعليمي أولي — راجعه المعلم", completedBy: [], sentences: [{ text: "تتكون الكلمات العربية من حروف نكتبها ونقرأها بترتيب صحيح.", hint: "ابدأ بتمييز شكل الحرف وصوته وموقعه في الكلمة." }, { text: "نقرأ الكلمة من اليمين إلى اليسار.", hint: "تدرب على قراءة كلمات قصيرة من بيئتك." }] },
+      { id: "YEM-G02-MA", grade: CURRICULUM_GRADES[1], subject: "الرياضيات", title: "الجمع والطرح ضمن الأعداد الأساسية", modelType: "geometry", xp: 10, source: "نموذج تعليمي أولي — راجعه المعلم", completedBy: [], sentences: [{ text: "الجمع يضم مجموعتين لمعرفة العدد الكلي.", hint: "يمكن تمثيل الجمع بأشياء محسوسة أو خط الأعداد." }, { text: "الطرح يوضح ما يتبقى بعد إزالة جزء من مجموعة.", hint: "تحقق من الطرح بإجراء عملية جمع عكسية." }] },
+      { id: "YEM-G03-SC", grade: CURRICULUM_GRADES[2], subject: "العلوم والحياة", title: "الكائنات الحية واحتياجاتها", modelType: "cell", xp: 10, source: "نموذج تعليمي أولي — راجعه المعلم", completedBy: [], sentences: [{ text: "تحتاج الكائنات الحية إلى الماء والهواء والغذاء لتستمر في الحياة.", hint: "قارن احتياجات النبات باحتياجات الحيوان." }, { text: "تنمو الكائنات الحية وتتغير خلال مراحل حياتها.", hint: "رتب مراحل نمو نبات من بذرة إلى نبات بالغ." }] },
+      { id: "YEM-G04-MA", grade: CURRICULUM_GRADES[3], subject: "الرياضيات", title: "فهم الكسور البسيطة", modelType: "geometry", xp: 10, source: "نموذج تعليمي أولي — راجعه المعلم", completedBy: [], sentences: [{ text: "الكسر يصف جزءاً من كل مقسم إلى أجزاء متساوية.", hint: "في الكسر ٣ على ٤ يمثل العدد ٤ مجموع الأجزاء المتساوية." }, { text: "يتكون الكسر من بسط ومقام.", hint: "البسط أعلى خط الكسر والمقام أسفله." }] },
+      { id: "YEM-G05-AR", grade: CURRICULUM_GRADES[4], subject: "اللغة العربية", title: "الجملة الاسمية وأركانها", modelType: "geometry", xp: 10, source: "نموذج تعليمي أولي — راجعه المعلم", completedBy: [], sentences: [{ text: "تبدأ الجملة الاسمية باسم وتتكون في صورتها الأساسية من مبتدأ وخبر.", hint: "مثال: العلمُ نافعٌ. العلم مبتدأ ونافع خبر." }, { text: "يطابق الخبر المبتدأ في المعنى ويتمم الفائدة.", hint: "حدد المبتدأ والخبر في جمل من كتاب القراءة." }] },
+      { id: "YEM-G07-MA", grade: CURRICULUM_GRADES[6], subject: "الرياضيات", title: "الأعداد الصحيحة ومقارنتها", modelType: "geometry", xp: 10, source: "نموذج تعليمي أولي — راجعه المعلم", completedBy: [], sentences: [{ text: "تضم الأعداد الصحيحة الأعداد الموجبة والسالبة والصفر.", hint: "تمثل الأعداد الصحيحة على خط الأعداد." }, { text: "كلما تحركنا إلى اليمين على خط الأعداد زادت قيمة العدد.", hint: "قارن بين سالب ثلاثة وسالب واحد على خط الأعداد." }] },
+      { id: "YEM-G08-SC", grade: CURRICULUM_GRADES[7], subject: "العلوم والحياة", title: "تركيب الذرة", modelType: "cell", xp: 10, source: "نموذج تعليمي أولي — راجعه المعلم", completedBy: [], sentences: [{ text: "تتكون الذرة من نواة تضم بروتونات ونيوترونات وإلكترونات حولها.", hint: "البروتون موجب والنيوترون متعادل والإلكترون سالب." }, { text: "تحدد البروتونات العدد الذري للعنصر.", hint: "استخدم الجدول الدوري للتعرف إلى أعداد العناصر." }] },
+      { id: "YEM-G09-MA", grade: CURRICULUM_GRADES[8], subject: "الرياضيات", title: "المعادلات الخطية ذات المتغير الواحد", modelType: "geometry", xp: 10, source: "نموذج تعليمي أولي — راجعه المعلم", completedBy: [], sentences: [{ text: "المعادلة الرياضية مساواة تحتوي على مقدار مجهول يمكن إيجاده بخطوات متكافئة.", hint: "حافظ على توازن طرفي المعادلة عند إجراء العملية نفسها." }, { text: "حل المعادلة س زائد خمسة يساوي اثني عشر هو س يساوي سبعة.", hint: "اطرح خمسة من الطرفين للتحقق." }] },
+      { id: "YEM-G10-SC", grade: CURRICULUM_GRADES[9], subject: "العلوم والحياة", title: "الخلية ووظائف عضياتها", modelType: "cell", xp: 10, source: "نموذج تعليمي أولي — راجعه المعلم", completedBy: [], sentences: [{ text: "الخلية هي الوحدة التركيبية والوظيفية الأساسية في الكائن الحي.", hint: "قارن بين الخلية النباتية والخلية الحيوانية." }, { text: "تحتوي النواة على المادة الوراثية وتشارك في تنظيم أنشطة الخلية.", hint: "اربط بين تركيب العضية ووظيفتها." }] },
+      { id: "YEM-G11-MA", grade: CURRICULUM_GRADES[10], subject: "الرياضيات", title: "الدوال وتمثيلها", modelType: "geometry", xp: 10, source: "نموذج تعليمي أولي — راجعه المعلم", completedBy: [], sentences: [{ text: "الدالة علاقة تربط كل مدخل في مجالها بمخرج واحد فقط.", hint: "استخدم جدول قيم لتمثيل الدالة بيانياً." }, { text: "يساعد التمثيل البياني على دراسة سلوك الدالة.", hint: "حدد المجال والمدى ونقاط التقاطع." }] },
+      { id: "YEM-G12-SC", grade: CURRICULUM_GRADES[11], subject: "العلوم والحياة", title: "مبادئ الحركة والقوى", modelType: "solar", xp: 10, source: "نموذج تعليمي أولي — راجعه المعلم", completedBy: [], sentences: [{ text: "تصف السرعة مقدار المسافة المقطوعة خلال وحدة الزمن.", hint: "السرعة المتوسطة تساوي المسافة الكلية مقسومة على الزمن الكلي." }, { text: "تؤثر القوى في حركة الأجسام وقد تغير سرعتها أو اتجاهها.", hint: "ميز بين الكتلة والوزن والقوة المحصلة." }] }
+    ];
+
+    const INITIAL_DATA = {
+      students: [
+        {
+          id: "ST-101",
+          pin: "1234",
+          parentPhone: "771001100",
+          name: "طالب تجريبي ١",
+          grade: "الصف السادس الأساسي",
+          points: 145,
+          attendance: 98,
+          teacherNote: "طالب متميز ومبادر في دروس العلوم والرياضيات.",
+          marks: createMarksForGrade(CURRICULUM_GRADES[5], {
+            "القرآن الكريم وعلومه": [39, 58], "التربية الإسلامية": [38, 57], "اللغة العربية": [37, 55],
+            "الرياضيات": [38, 57], "العلوم والحياة": [40, 59], "الدراسات الاجتماعية": [36, 54], "اللغة الإنجليزية": [34, 52]
+          })
+        },
+        {
+          id: "ST-102",
+          pin: "2222",
+          parentPhone: "000000002",
+          name: "طالبة تجريبية ٢",
+          grade: "الصف السادس الأساسي",
+          points: 160,
+          attendance: 100,
+          teacherNote: "التزام رائع في تسليم الواجبات والمشاركة الصفية.",
+          marks: createMarksForGrade(CURRICULUM_GRADES[5], {
+            "القرآن الكريم وعلومه": [40, 59], "التربية الإسلامية": [40, 58], "اللغة العربية": [39, 58],
+            "الرياضيات": [38, 56], "العلوم والحياة": [39, 58], "الدراسات الاجتماعية": [38, 57], "اللغة الإنجليزية": [37, 55]
+          })
+        }
+      ],
+      lessons: [
+        {
+          id: "L1",
+          grade: CURRICULUM_GRADES[5],
+          title: "المجموعة الشمسية وحركة الكواكب",
+          source: "درس عرض تجريبي — يحتاج مراجعة المعلم",
+          subject: "العلوم والحياة",
+          xp: 25,
+          modelType: "solar",
+          completedBy: ["ST-101"],
+          sentences: [
+            { text: "تتكون المجموعة الشمسية من الشمس وثمانية كواكب تدور حولها في مدارات إهليلجية.", hint: "المدار الإهليلجي هو مسار بيضاوي منتظم." },
+            { text: "تعد الشمس مصدر الضوء والحرارة الأساسي لجميع الكائنات الحية على سطح الأرض.", hint: "تبلغ حرارة سطح الشمس نحو 5500 درجة مئوية." },
+            { text: "تدور الأرض حول محورها مرة كل أربع وعشرين ساعة فينتج عن ذلك تعاقب الليل والنهار.", hint: "بينما ينتج تعاقب الفصول الأربعة عن دورانها حول الشمس." }
+          ]
+        },
+        {
+          id: "L2",
+          grade: CURRICULUM_GRADES[5],
+          title: "المجسمات الهندسية المنتظمة",
+          source: "درس عرض تجريبي — يحتاج مراجعة المعلم",
+          subject: "الرياضيات",
+          xp: 20,
+          modelType: "geometry",
+          completedBy: ["ST-101"],
+          sentences: [
+            { text: "المكعب مجسم ثلاثي الأبعاد له ستة أوجه مربعة متساوية في المساحة.", hint: "حجم المكعب يساوي طول الضلع مضروباً في نفسه ثلاث مرات." },
+            { text: "الهرم الرباعي يتكون من قاعدة مربعة وأربعة أوجه مثلثية تلتقي في نقطة الرأس.", hint: "الأهرامات مثال هندسي شهير على الأشكال الهرمية." }
+          ]
+        },
+        {
+          id: "L3",
+          grade: CURRICULUM_GRADES[5],
+          title: "تركيب الخلية الحية ووظائفها",
+          source: "درس عرض تجريبي — يحتاج مراجعة المعلم",
+          subject: "العلوم والحياة",
+          xp: 30,
+          modelType: "cell",
+          completedBy: [],
+          sentences: [
+            { text: "الخلية هي وحدة البناء والوظيفة الأساسية في أجسام جميع الكائنات الحية.", hint: "اكتشف العالم روبرت هوك الخلية عام 1665م." },
+            { text: "تتحكم النواة في جميع الأنشطة الحيوية للخلية وتنقل الصفات الوراثية.", hint: "تحاط النواة بغلاف نووي ينظم مرور المواد." }
+          ]
+        },
+        ...STARTER_CURRICULUM_LESSONS
+      ],
+      assignments: [
+        {
+          id: "A1",
+          grade: CURRICULUM_GRADES[5],
+          subject: "العلوم والحياة",
+          title: "تطبيق عملي: ترتيب كواكب المجموعة الشمسية",
+          question: "ما هو الكوكب الثالث من حيث البعد عن الشمس؟",
+          options: ["المريخ", "الأرض", "الزهرة"],
+          correctIndex: 1,
+          xp: 20,
+          submissions: {}
+        },
+        {
+          id: "A2",
+          grade: CURRICULUM_GRADES[5],
+          subject: "الرياضيات",
+          title: "حساب عدد أوجه المكعب",
+          question: "كم عدد الأوجه المربعة للمكعب المنتظم؟",
+          options: ["4 أوجه", "6 أوجه", "8 أوجه"],
+          correctIndex: 1,
+          xp: 15,
+          submissions: {}
+        }
+      ],
+      announcements: [
+        { id: "AN1", title: "انطلاق مسابقة أوائل الطلبة", date: "الأحد القادم", body: "تدعو إدارة مدرسة النور جميع طلاب الصفوف الأساسية للمشاركة في المسابقة العلمية الثقافية." },
+        { id: "AN2", title: "موعد تسليم مشاريع المختبر", date: "نهاية الأسبوع", body: "يرجى من الطلاب إتمام أنشطة المختبر ثلاثي الأبعاد قبل يوم الخميس." }
+      ],
+      parentMessages: [
+        { id: "M1", from: "ولي أمر تجريبي", text: "هذه رسالة تجريبية لعرض آلية التواصل بين ولي الأمر والمدرسة.", time: "أمس" }
+      ],
+      schedule: [
+        { day: "الأحد", classes: "القرآن الكريم • الرياضيات • العلوم • اللغة العربية" },
+        { day: "الاثنين", classes: "اللغة العربية • الدراسات • الرياضيات • الحاسوب" },
+        { day: "الثلاثاء", classes: "العلوم • التربية الإسلامية • اللغة الإنجليزية • الرياضة" },
+        { day: "الأربعاء", classes: "الرياضيات • اللغة العربية • العلوم • التربية الفنية" },
+        { day: "الخميس", classes: "القرآن الكريم • النشاط العلمي • مراجعة شاملة" }
+      ],
+      scheduleByGrade: createDefaultWeeklySchedule(),
+      attendanceRecords: []
+    };
+
+    function cloneInitialData() {
+      return JSON.parse(JSON.stringify(INITIAL_DATA));
+    }
+
+    function loadDemoData() {
+      const fallback = cloneInitialData();
+      try {
+        const raw = window.localStorage.getItem(STORAGE_KEY);
+        if (!raw) return fallback;
+        const saved = JSON.parse(raw);
+        if (!saved || typeof saved !== "object" || Array.isArray(saved)) return fallback;
+
+        const students = Array.isArray(saved.students)
+          ? saved.students.filter((student) => student && typeof student.id === "string" && typeof student.name === "string" && Array.isArray(student.marks))
+              .map((student) => ({
+                ...student,
+                parentPhone: student.id === "ST-101" && ["000000001", "770000001"].includes(String(student.parentPhone || "")) ? "771001100" : student.parentPhone,
+                grade: CURRICULUM_GRADES.includes(student.grade) ? student.grade : CURRICULUM_GRADES[5],
+                marks: student.marks.filter((mark) => mark && typeof mark.subject === "string")
+              }))
+          : fallback.students;
+        const lessons = Array.isArray(saved.lessons)
+          ? saved.lessons.filter((lesson) => lesson && typeof lesson.id === "string" && typeof lesson.title === "string")
+              .map((lesson) => ({ ...lesson, grade: CURRICULUM_GRADES.includes(lesson.grade) ? lesson.grade : CURRICULUM_GRADES[5], subject: typeof lesson.subject === "string" ? lesson.subject : "العلوم والحياة", completedBy: Array.isArray(lesson.completedBy) ? lesson.completedBy.filter((id) => typeof id === "string") : [], sentences: Array.isArray(lesson.sentences) ? lesson.sentences.filter((sentence) => sentence && typeof sentence.text === "string") : [] }))
+          : fallback.lessons;
+        const assignments = Array.isArray(saved.assignments)
+          ? saved.assignments.filter((assignment) => assignment && typeof assignment.id === "string" && Array.isArray(assignment.options))
+              .map((assignment) => ({ ...assignment, grade: CURRICULUM_GRADES.includes(assignment.grade) ? assignment.grade : CURRICULUM_GRADES[5], submissions: assignment.submissions && typeof assignment.submissions === "object" && !Array.isArray(assignment.submissions) ? assignment.submissions : {} }))
+          : fallback.assignments;
+
+        return {
+          ...fallback,
+          ...saved,
+          students: students.length ? students : fallback.students,
+          lessons: lessons.length ? lessons : fallback.lessons,
+          assignments,
+          announcements: Array.isArray(saved.announcements) ? saved.announcements.filter((item) => item && typeof item.id === "string") : fallback.announcements,
+          parentMessages: Array.isArray(saved.parentMessages) ? saved.parentMessages.filter((item) => item && typeof item.id === "string") : fallback.parentMessages,
+          schedule: Array.isArray(saved.schedule) ? saved.schedule.filter((item) => item && typeof item.day === "string") : fallback.schedule,
+          scheduleByGrade: saved.scheduleByGrade && typeof saved.scheduleByGrade === "object" && !Array.isArray(saved.scheduleByGrade)
+            ? Object.fromEntries(CURRICULUM_GRADES.map((grade) => [
+                grade,
+                Array.isArray(saved.scheduleByGrade[grade])
+                  ? WEEK_DAYS.map((day) => {
+                      const row = saved.scheduleByGrade[grade].find((item) => item && item.day === day);
+                      return { day, classes: String(row?.classes || "").slice(0, 400) };
+                    })
+                  : fallback.scheduleByGrade[grade]
+              ]))
+            : fallback.scheduleByGrade,
+          attendanceRecords: Array.isArray(saved.attendanceRecords)
+            ? saved.attendanceRecords.filter((record) => record && typeof record.date === "string" && typeof record.grade === "string" && record.entries && typeof record.entries === "object" && !Array.isArray(record.entries))
+            : fallback.attendanceRecords
+        };
+      } catch (error) {
+        console.warn("تعذر قراءة البيانات المحلية التجريبية، ستُستخدم بيانات البداية.", error);
+        return fallback;
+      }
+    }
+
+    function createDemoPin() {
+      const values = new Uint32Array(1);
+      if (window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(values);
+      else values[0] = Math.floor(Math.random() * 0xffffffff);
+      return String(100000 + (values[0] % 900000));
+    }
+
+    /* =========================================================================
+       5. التطبيق الرئيسي (App)
+    ========================================================================= */
+    function detectEmbeddedBrowser() {
+      const userAgent = navigator.userAgent || "";
+      const knownAppWebView = /ChatGPT|OpenAI|FBAN|FBAV|Instagram|Line\/|Telegram|Twitter|LinkedInApp|Snapchat|TikTok|Pinterest|;\s*wv\)|\bwv\b|WebView/i.test(userAgent);
+      const isIOS = /iPhone|iPad|iPod/i.test(userAgent);
+      const iosWebView = isIOS && !/Safari/i.test(userAgent);
+      const androidWebView = /Android/i.test(userAgent) && /;\s*wv\)|Version\/[\d.]+.*Chrome\//i.test(userAgent);
+      return knownAppWebView || iosWebView || androidWebView;
+    }
+
+    function detectStandaloneDisplay() {
+      return Boolean(
+        window.matchMedia?.("(display-mode: standalone)").matches ||
+        window.navigator.standalone === true
+      );
+    }
+
+    function App() {
+      const [data, setData] = useState(loadDemoData);
+
+      const [darkMode, setDarkMode] = useState(true);
+      const [fontScale, setFontScale] = useState("normal");
+      const [speechEnabled, setSpeechEnabled] = useState(true);
+      const [lessonSearch, setLessonSearch] = useState("");
+      const [lessonSubjectFilter, setLessonSubjectFilter] = useState("الكل");
+      const [teacherCurriculumGrade, setTeacherCurriculumGrade] = useState(CURRICULUM_GRADES[5]);
+      const [teacherLessonSearch, setTeacherLessonSearch] = useState("");
+      const [teacherLessonSubjectFilter, setTeacherLessonSubjectFilter] = useState("الكل");
+      const [newStudentGrade, setNewStudentGrade] = useState(CURRICULUM_GRADES[5]);
+      const [newLessonTitle, setNewLessonTitle] = useState("");
+      const [newLessonSubject, setNewLessonSubject] = useState(CURRICULUM_SUBJECTS[0]);
+      const [newLessonGrade, setNewLessonGrade] = useState(CURRICULUM_GRADES[5]);
+      const [newLessonContent, setNewLessonContent] = useState("");
+      const [newLessonModel, setNewLessonModel] = useState("cell");
+      const [newAssignmentGrade, setNewAssignmentGrade] = useState(CURRICULUM_GRADES[5]);
+      const [newAssignmentSubject, setNewAssignmentSubject] = useState(CURRICULUM_SUBJECTS[3]);
+      const [aiSettings, setAiSettings] = useState(loadAiSettings);
+      const [pollinationsToken, setPollinationsToken] = useState("");
+      const [pollinationsStatus, setPollinationsStatus] = useState("");
+      const [aiBusy, setAiBusy] = useState(false);
+      const [installPrompt, setInstallPrompt] = useState(null);
+      const [isEmbeddedBrowser] = useState(() => detectEmbeddedBrowser());
+      const [isStandaloneApp] = useState(() => detectStandaloneDisplay());
+      const [appInstalled, setAppInstalled] = useState(() => detectStandaloneDisplay());
+      const [showInstallGuidance, setShowInstallGuidance] = useState(() => detectEmbeddedBrowser());
+      const [pwaUpdateAvailable, setPwaUpdateAvailable] = useState(false);
+      const [pwaReady, setPwaReady] = useState(false);
+      const swRegistrationRef = useRef(null);
+
+      // حالة المصادقة والدور
+      const [role, setRole] = useState(null); // null | "student" | "parent" | "teacher" | "admin"
+      const [loginTab, setLoginTab] = useState("student");
+      const [loginId, setLoginId] = useState(DEMO_CREDENTIALS.student.id);
+      const [loginSecret, setLoginSecret] = useState(DEMO_CREDENTIALS.student.secret);
+      const [loginError, setLoginError] = useState("");
+      const [activeStudentId, setActiveStudentId] = useState("ST-101");
+
+      // تبويبات الطالب والدرس النشط
+      const [studentTab, setStudentTab] = useState("lessons");
+      const [activeLessonId, setActiveLessonId] = useState("L1");
+      const [activeSentenceIdx, setActiveSentenceIdx] = useState(0);
+      const [autoRotate3D, setAutoRotate3D] = useState(true);
+
+      // المساعد الذكي الخاص بكل دور
+      const [aiOpen, setAiOpen] = useState(false);
+      const [aiInput, setAiInput] = useState("");
+      const [aiHistoryByRole, setAiHistoryByRole] = useState({
+        student: [{ sender: "ai", text: "مرحباً بك في مساعد نور الذكي للطالب! اسألني عن تلخيص درس اليوم أو حساب معدلك أو جدول حصصك." }],
+        parent: [{ sender: "ai", text: "أهلاً بولي الأمر الكريم! يمكنني تزويدك بملخص درجات ابنك، نسبة حضوره، وملاحظات المعلمين فوراً." }],
+        teacher: [{ sender: "ai", text: "مرحباً أستاذنا الفاضل! جاهز لمساعدتك في تحليل نتائج الفصل، اقتراح أسئلة واجبات، أو رصد الدرجات." }],
+        admin: [{ sender: "ai", text: "أهلاً بالإدارة والمشرف العام! أعرض لك إحصائيات المدرسة، متوسط النجاح العام، وحالة الإعلانات." }]
+      });
+
+      // حقول نماذج المعلم وولي الأمر والمشرف
+      const [selectedSubjectIdx, setSelectedSubjectIdx] = useState(0);
+      const [newAssignTitle, setNewAssignTitle] = useState("");
+      const [newAssignQuestion, setNewAssignQuestion] = useState("");
+      const [newAssignOptions, setNewAssignOptions] = useState(["", "", ""]);
+      const [newAssignCorrectIndex, setNewAssignCorrectIndex] = useState(0);
+      const [parentMsgText, setParentMsgText] = useState("");
+      const [newAnnTitle, setNewAnnTitle] = useState("");
+      const [newAnnBody, setNewAnnBody] = useState("");
+      const [newStudentName, setNewStudentName] = useState("");
+      const [newStudentParentPhone, setNewStudentParentPhone] = useState("");
+      const [attendanceDate, setAttendanceDate] = useState(() => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`; });
+      const [quizAnswers, setQuizAnswers] = useState({});
+      const [quizResults, setQuizResults] = useState({});
+      const [newQuizQuestion, setNewQuizQuestion] = useState("");
+      const [newQuizOptions, setNewQuizOptions] = useState(["", "", ""]);
+      const [newQuizCorrectIndex, setNewQuizCorrectIndex] = useState(0);
+      const idQrRef = useRef(null);
+      const [toast, setToast] = useState("");
+      const toastTimerRef = useRef(null);
+
+      useEffect(() => {
+        try {
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        } catch (error) {
+          console.warn("تعذر حفظ التغييرات المحلية التجريبية.", error);
+        }
+      }, [data]);
+
+      useEffect(() => {
+        const splash = document.getElementById("instant-splash");
+        if (!splash) return;
+        const timer = window.setTimeout(() => splash.classList.add("splash-hidden"), 140);
+        return () => window.clearTimeout(timer);
+      }, []);
+
+
+      useEffect(() => {
+        try {
+          const safeSettings = { ...aiSettings };
+          delete safeSettings.pollinationsKey;
+          window.localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(safeSettings));
+        } catch (error) { console.warn("تعذر حفظ تفضيلات المساعد محلياً.", error); }
+      }, [aiSettings]);
+
+      // Pollinations BYOP OAuth callback: exchange the short-lived code using PKCE.
+      useEffect(() => {
+        const callbackUrl = new URL(window.location.href);
+        const code = callbackUrl.searchParams.get("code");
+        const returnedState = callbackUrl.searchParams.get("state");
+        const authError = callbackUrl.searchParams.get("error");
+        if (!code && !authError) return;
+        let pending = null;
+        try { pending = JSON.parse(sessionStorage.getItem("alnoor_pollinations_pending_oauth") || "null"); } catch {}
+        callbackUrl.searchParams.delete("code");
+        callbackUrl.searchParams.delete("state");
+        callbackUrl.searchParams.delete("error");
+        callbackUrl.searchParams.delete("error_description");
+        window.history.replaceState({}, document.title, callbackUrl.pathname + callbackUrl.search + callbackUrl.hash);
+        if (authError) {
+          sessionStorage.removeItem("alnoor_pollinations_pending_oauth");
+          setPollinationsStatus("تم إلغاء ربط Pollinations أو رفض التفويض.");
+          return;
+        }
+        if (!pending || typeof pending.verifier !== "string" || returnedState !== pending.state) {
+          sessionStorage.removeItem("alnoor_pollinations_pending_oauth");
+          setPollinationsStatus("تعذر التحقق من استجابة التفويض. ابدأ الربط من جديد.");
+          return;
+        }
+        (async () => {
+          const form = new URLSearchParams({
+            grant_type: "authorization_code",
+            code,
+            redirect_uri: pending.redirectUri,
+            code_verifier: pending.verifier
+          });
+          if (pending.clientId) form.set("client_id", pending.clientId);
+          const response = await fetch("https://enter.pollinations.ai/api/oauth/token", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: form.toString()
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || typeof payload.access_token !== "string") {
+            throw new Error(payload.error_description || payload.error || `HTTP ${response.status}`);
+          }
+          const expiresIn = Math.max(60, Number(payload.expires_in) || 604800);
+          const expiresAt = Date.now() + expiresIn * 1000;
+          sessionStorage.removeItem("alnoor_pollinations_pending_oauth");
+          setPollinationsToken(payload.access_token);
+          setAiSettings((prev) => ({ ...prev, provider: "pollinations" }));
+          setPollinationsStatus("تم ربط Pollinations لهذا التبويب. التفويض مؤقت ويمكن إلغاؤه من حسابك.");
+        })().catch((error) => {
+          sessionStorage.removeItem("alnoor_pollinations_pending_oauth");
+          setPollinationsStatus(`تعذر إكمال ربط Pollinations: ${String(error.message || "خطأ اتصال").slice(0, 140)}`);
+        });
+      }, []);
+
+      useEffect(() => () => {
+        if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+      }, []);
+
+      useEffect(() => {
+        let registration = null;
+        let refreshing = false;        const onControllerChange = () => {
+          if (refreshing) return;
+          refreshing = true;
+          window.location.reload();
+        };
+        const onBeforeInstallPrompt = (event) => {
+          event.preventDefault();
+          setInstallPrompt(event);
+          setShowInstallGuidance(false);
+        };
+        const onAppInstalled = () => {
+          setInstallPrompt(null);
+          setAppInstalled(true);
+          setShowInstallGuidance(false);
+          notify("تم تثبيت مدرسة النور على جهازك");
+        };
+
+        // Keep install-prompt listeners active even when an in-app browser blocks Service Workers.
+        window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+        window.addEventListener("appinstalled", onAppInstalled);
+
+        if ("serviceWorker" in navigator) {
+          navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
+          navigator.serviceWorker.register("./sw.js", { scope: "./" }).then((reg) => {
+            registration = reg;
+            swRegistrationRef.current = reg;
+            setPwaReady(true);
+            setPwaUpdateAvailable(Boolean(reg.waiting));
+            reg.addEventListener("updatefound", () => {
+              const worker = reg.installing;
+              if (!worker) return;
+              worker.addEventListener("statechange", () => {
+                if (worker.state === "installed" && navigator.serviceWorker.controller) setPwaUpdateAvailable(true);
+              });
+            });
+          }).catch((error) => console.warn("تعذر تسجيل Service Worker", error));
+        }
+
+        return () => {
+          window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+          window.removeEventListener("appinstalled", onAppInstalled);
+          if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
+          }
+          registration = null;
+        };
+      }, []);
+
+      useEffect(() => {
+        const root = document.documentElement;
+        if (darkMode) root.classList.add("dark");
+        else root.classList.remove("dark");
+      }, [darkMode]);
+
+      useEffect(() => {
+        document.documentElement.style.fontSize = fontScale === "large" ? "17.5px" : "16px";
+      }, [fontScale]);
+
+      const notify = (msg) => {
+        setToast(msg);
+        if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = window.setTimeout(() => {
+          setToast("");
+          toastTimerRef.current = null;
+        }, 2600);
+      };
+
+      const currentStudent = useMemo(
+        () => data.students.find((s) => s.id === activeStudentId) || data.students[0] || INITIAL_DATA.students[0],
+        [data.students, activeStudentId]
+      );
+      useEffect(() => {
+        if (!idQrRef.current || !currentStudent) return;
+        try {
+          if (typeof window.qrcode !== "function") throw new Error("QR library unavailable");
+          const qr = window.qrcode(0, "M");
+          qr.addData(JSON.stringify({ school: "AlNoor", id: currentStudent.id, name: currentStudent.name, grade: currentStudent.grade }));
+          qr.make();
+          idQrRef.current.innerHTML = qr.createSvgTag(4, 0);
+          const svg = idQrRef.current.querySelector("svg");
+          if (svg) { svg.setAttribute("role", "img"); svg.setAttribute("aria-label", "رمز QR للبطاقة المدرسية"); }
+        } catch (error) {
+          idQrRef.current.textContent = currentStudent.id;
+        }
+      }, [role, studentTab, currentStudent?.id, currentStudent?.name, currentStudent?.grade]);
+
+
+      const activeLesson = useMemo(
+        () => data.lessons.find((l) => l.id === activeLessonId) || data.lessons[0] || INITIAL_DATA.lessons[0],
+        [data.lessons, activeLessonId]
+      );
+
+      const activeLessonQuizzes = useMemo(() => {
+        const authored = Array.isArray(activeLesson?.questions) ? activeLesson.questions.filter((q) => q && typeof q.question === "string" && Array.isArray(q.options) && q.options.length >= 2) : [];
+        return authored.length ? authored : buildDefaultLessonQuiz(activeLesson);
+      }, [activeLesson]);
+
+      const attendanceStudents = useMemo(
+        () => data.students.filter((student) => student.grade === teacherCurriculumGrade),
+        [data.students, teacherCurriculumGrade]
+      );
+
+      const getAttendanceRecord = (grade, date) => data.attendanceRecords.find((record) => record.grade === grade && record.date === date);
+      const getAttendanceStatus = (studentId, grade = teacherCurriculumGrade, date = attendanceDate) => {
+        const record = getAttendanceRecord(grade, date);
+        return record?.entries?.[studentId] || "";
+      };
+
+      const setAttendanceStatus = (studentId, status) => {
+        setData((prev) => {
+          const records = [...(prev.attendanceRecords || [])];
+          const recordIndex = records.findIndex((record) => record.grade === teacherCurriculumGrade && record.date === attendanceDate);
+          const current = recordIndex >= 0 ? records[recordIndex] : { id: `${teacherCurriculumGrade}-${attendanceDate}`, grade: teacherCurriculumGrade, date: attendanceDate, entries: {} };
+          const updated = { ...current, entries: { ...(current.entries || {}), [studentId]: status } };
+          if (recordIndex >= 0) records[recordIndex] = updated;
+          else records.push(updated);
+          return { ...prev, attendanceRecords: records, students: recalculateAttendanceStudents(prev.students, records) };
+        });
+      };
+
+      const markAllPresent = () => {
+        setData((prev) => {
+          const entries = Object.fromEntries(prev.students.filter((student) => student.grade === teacherCurriculumGrade).map((student) => [student.id, "present"]));
+          const records = [...(prev.attendanceRecords || [])];
+          const recordIndex = records.findIndex((record) => record.grade === teacherCurriculumGrade && record.date === attendanceDate);
+          const current = recordIndex >= 0 ? records[recordIndex] : { id: `${teacherCurriculumGrade}-${attendanceDate}`, grade: teacherCurriculumGrade, date: attendanceDate, entries: {} };
+          const updated = { ...current, entries: { ...(current.entries || {}), ...entries } };
+          if (recordIndex >= 0) records[recordIndex] = updated;
+          else records.push(updated);
+          return { ...prev, attendanceRecords: records, students: recalculateAttendanceStudents(prev.students, records) };
+        });
+        notify("تم تسجيل طلاب الصف كحاضرين لهذا اليوم. يمكنك تعديل حالات الغياب والتأخر.");
+      };
+
+      const submitLessonQuiz = (lesson, quiz, quizIndex) => {
+        const key = `${lesson.id}:${quiz.id || quizIndex}`;
+        const choice = quizAnswers[key];
+        if (choice === undefined || choice === null || choice === "") { notify("اختر إجابة قبل التصحيح"); return; }
+        const correct = Number(choice) === Number(quiz.correctIndex);
+        const rewardKey = `${currentStudent.id}:${quiz.id || quizIndex}`;
+        const alreadyRewarded = (lesson.quizCompletedBy || []).includes(rewardKey);
+        setQuizResults((prev) => ({ ...prev, [key]: { correct, answer: quiz.correctIndex } }));
+        if (correct && !alreadyRewarded) {
+          setData((prev) => ({
+            ...prev,
+            lessons: prev.lessons.map((item) => item.id === lesson.id ? { ...item, quizCompletedBy: [...new Set([...(item.quizCompletedBy || []), rewardKey])] } : item),
+            students: prev.students.map((student) => student.id === currentStudent.id ? { ...student, points: (Number(student.points) || 0) + (Number(quiz.xp) || 10) } : student)
+          }));
+          notify(`إجابة صحيحة. حصلت على +${Number(quiz.xp) || 10} XP`);
+        } else {
+          notify(correct ? "إجابة صحيحة. سبق احتساب نقاط هذا الاختبار." : "ليست الإجابة الصحيحة. راجع محتوى الدرس وحاول مرة أخرى.");
+        }
+      };
+
+      const addQuestionToActiveLesson = () => {
+        const question = newQuizQuestion.trim().slice(0, 240);
+        const options = newQuizOptions.map((value) => value.trim().slice(0, 180));
+        if (!question || options.some((option) => !option)) { notify("اكتب السؤال والخيارات الثلاثة أولاً"); return; }
+        const quiz = { id: `Q-${Date.now()}`, question, options, correctIndex: newQuizCorrectIndex, xp: 10 };
+        setData((prev) => ({ ...prev, lessons: prev.lessons.map((lesson) => lesson.id === activeLesson.id ? { ...lesson, questions: [...(lesson.questions || []), quiz] } : lesson) }));
+        setNewQuizQuestion(""); setNewQuizOptions(["", "", ""]); setNewQuizCorrectIndex(0);
+        notify("أضيف السؤال إلى بنك اختبارات الدرس في هذا المتصفح");
+      };
+
+      useEffect(() => {
+        if (!currentStudent) return;
+        if (activeLesson && activeLesson.grade && activeLesson.grade !== currentStudent.grade) {
+          const firstForGrade = data.lessons.find((lesson) => lesson.grade === currentStudent.grade);
+          if (firstForGrade) { setActiveLessonId(firstForGrade.id); setActiveSentenceIdx(0); }
+        }
+      }, [currentStudent?.grade, activeLesson?.grade, data.lessons]);
+
+      const visibleStudentLessons = useMemo(() => {
+        const q = lessonSearch.trim().toLocaleLowerCase("ar");
+        return data.lessons.filter((lesson) => {
+          if (lesson.grade && lesson.grade !== currentStudent.grade) return false;
+          if (lessonSubjectFilter !== "الكل" && lesson.subject !== lessonSubjectFilter) return false;
+          if (!q) return true;
+          const content = [lesson.title, lesson.subject, ...(lesson.sentences || []).map((sentence) => sentence.text), ...(lesson.sentences || []).map((sentence) => sentence.hint || "")].join(" ").toLocaleLowerCase("ar");
+          return content.includes(q);
+        });
+      }, [data.lessons, currentStudent.grade, lessonSearch, lessonSubjectFilter]);
+
+      const visibleTeacherLessons = useMemo(() => {
+        const q = teacherLessonSearch.trim().toLocaleLowerCase("ar");
+        return data.lessons.filter((lesson) => {
+          if (lesson.grade && lesson.grade !== teacherCurriculumGrade) return false;
+          if (teacherLessonSubjectFilter !== "الكل" && lesson.subject !== teacherLessonSubjectFilter) return false;
+          if (!q) return true;
+          return [lesson.title, lesson.subject, ...(lesson.sentences || []).map((sentence) => sentence.text)].join(" ").toLocaleLowerCase("ar").includes(q);
+        });
+      }, [data.lessons, teacherCurriculumGrade, teacherLessonSearch, teacherLessonSubjectFilter]);
+
+      const visibleStudentAssignments = useMemo(() => data.assignments.filter((assignment) => !assignment.grade || assignment.grade === currentStudent.grade), [data.assignments, currentStudent.grade]);
+
+      const handleCheckForUpdates = async () => {
+        try {
+          const registration = swRegistrationRef.current || await navigator.serviceWorker?.getRegistration("./");
+          if (!registration) { notify("تحديثات التطبيق متاحة بعد فتحه عبر HTTPS أو localhost"); return; }
+          await registration.update();
+          if (registration.waiting) {
+            setPwaUpdateAvailable(true);
+            registration.waiting.postMessage({ type: "SKIP_WAITING" });
+            notify("يجري تثبيت التحديث وإعادة فتح التطبيق");
+          } else {
+            setPwaUpdateAvailable(false);
+            notify("التطبيق على آخر إصدار متاح");
+          }
+        } catch (error) {
+          console.warn("تعذر التحقق من تحديث التطبيق", error);
+          notify("تعذر التحقق من التحديث. تحقق من الاتصال بالإنترنت.");
+        }
+      };
+
+      const handleInstallApp = async () => {
+        if (appInstalled || isStandaloneApp) {
+          notify("تطبيق مدرسة النور مثبت بالفعل على جهازك");
+          return;
+        }
+
+        if (isEmbeddedBrowser) {
+          setShowInstallGuidance(true);
+          notify("افتح الرابط في المتصفح لتثبيت التطبيق");
+          return;
+        }
+
+        if (!installPrompt) {
+          setShowInstallGuidance(true);
+          const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+          notify(isIOS ? "استخدم زر المشاركة في Safari ثم اختر إضافة إلى الشاشة الرئيسية" : "افتح قائمة المتصفح واختر تثبيت التطبيق أو إضافة إلى الشاشة الرئيسية");
+          return;
+        }
+
+        const promptEvent = installPrompt;
+        setInstallPrompt(null);
+        try {
+          await promptEvent.prompt();
+          const choice = await promptEvent.userChoice;
+          if (choice?.outcome === "accepted") {
+            notify("تم قبول تثبيت مدرسة النور");
+          } else {
+            notify("يمكنك تثبيت التطبيق في أي وقت من هذا الزر");
+          }
+        } catch (error) {
+          console.warn("تعذر فتح نافذة التثبيت", error);
+          setShowInstallGuidance(true);
+          notify("تعذر فتح نافذة التثبيت. افتح قائمة المتصفح لإضافة التطبيق إلى الشاشة الرئيسية.");
+        }
+      };
+
+      const handleConnectPollinations = async () => {
+        try {
+          if (!window.crypto?.subtle || !window.crypto?.getRandomValues) {
+            notify("يتطلب ربط Pollinations متصفحاً آمناً يدعم Web Crypto");
+            return;
+          }
+          const verifier = randomBase64Url(48);
+          const state = randomBase64Url(32);
+          const challengeBytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
+          const challenge = btoa(String.fromCharCode(...new Uint8Array(challengeBytes))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+          const redirectUri = `${window.location.origin}${window.location.pathname}`;
+          const clientId = aiSettings.pollinationsAppKey.trim();
+          if (clientId && !clientId.startsWith("pk_")) {
+            notify("معرّف تطبيق Pollinations يجب أن يبدأ بـ pk_");
+            return;
+          }
+          sessionStorage.setItem("alnoor_pollinations_pending_oauth", JSON.stringify({ verifier, state, redirectUri, clientId }));
+          const params = new URLSearchParams({
+            response_type: "code", redirect_uri: redirectUri, scope: "usage", state,
+            code_challenge: challenge, code_challenge_method: "S256",
+            models: "text", expiry: "7", budget: "1"
+          });
+          if (clientId) params.set("client_id", clientId);
+          window.location.assign(`https://enter.pollinations.ai/authorize?${params.toString()}`);
+        } catch (error) {
+          console.warn("تعذر بدء تفويض Pollinations", error);
+          notify("تعذر بدء ربط Pollinations. تحقق من المتصفح والاتصال.");
+        }
+      };
+
+      const handleDisconnectPollinations = () => {
+        sessionStorage.removeItem("alnoor_pollinations_pending_oauth");
+        setPollinationsToken("");
+        setAiSettings((prev) => prev.provider === "pollinations" ? { ...prev, provider: "local" } : prev);
+        setPollinationsStatus("تم مسح جلسة الربط من هذه الصفحة. ألغِ التفويض من حساب Pollinations إذا أردت إبطاله نهائياً.");
+        notify("تم فصل Pollinations من هذه الجلسة");
+      };
+
+      const selectLoginRole = (targetRole) => {
+        const credentials = DEMO_CREDENTIALS[targetRole] || DEMO_CREDENTIALS.student;
+        setLoginTab(targetRole);
+        setLoginId(credentials.id);
+        setLoginSecret(credentials.secret);
+        setLoginError("");
+      };
+
+      const loginWithCredentials = (selectedRole, rawId, rawSecret) => {
+        const idClean = String(rawId || "").trim().toUpperCase();
+        const secClean = String(rawSecret || "").trim();
+
+        if (selectedRole === "student") {
+          const st = data.students.find((s) => String(s.id || "").toUpperCase() === idClean && String(s.pin || "") === secClean);
+          if (!st) return setLoginError("تعذر تسجيل الدخول. تحقق من البيانات وحاول مجدداً.");
+          setActiveStudentId(st.id);
+          setActiveLessonId(data.lessons.find((lesson) => lesson.grade === st.grade)?.id || data.lessons[0]?.id || "L1");
+          setLessonSearch("");
+          setLessonSubjectFilter("الكل");
+          setRole("student");
+          notify(`أهلاً بك يا ${st.name.split(" ")[0]}`);
+        } else if (selectedRole === "parent") {
+          const st = data.students.find((s) => String(s.id || "").toUpperCase() === idClean && String(s.parentPhone || "") === secClean);
+          if (!st) return setLoginError("تعذر التحقق من بيانات ولي الأمر. تحقق من البيانات وحاول مجدداً.");
+          setActiveStudentId(st.id);
+          setActiveLessonId(data.lessons.find((lesson) => lesson.grade === st.grade)?.id || data.lessons[0]?.id || "L1");
+          setRole("parent");
+          notify("تم الدخول إلى بوابة ولي الأمر بنجاح");
+        } else if (selectedRole === "teacher") {
+          if (idClean === "TCH-01" && secClean === "1111") {
+            setRole("teacher");
+            notify("مرحباً بك في بوابة المعلم");
+          } else {
+            setLoginError("تعذر تسجيل الدخول. تحقق من البيانات وحاول مجدداً.");
+          }
+        } else if (selectedRole === "admin") {
+          if (idClean === "ADM-01" && secClean === "0000") {
+            setRole("admin");
+            notify("تم تسجيل الدخول بصلاحية المشرف العام");
+          } else {
+            setLoginError("تعذر تسجيل الدخول. تحقق من البيانات وحاول مجدداً.");
+          }
+        }
+      };
+
+      const handleSmartLogin = (e) => {
+        e.preventDefault();
+        loginWithCredentials(loginTab, loginId, loginSecret);
+      };
+
+      const handleQuickDemoLogin = () => {
+        const credentials = DEMO_CREDENTIALS[loginTab] || DEMO_CREDENTIALS.student;
+        setLoginId(credentials.id);
+        setLoginSecret(credentials.secret);
+        setLoginError("");
+        loginWithCredentials(loginTab, credentials.id, credentials.secret);
+      };
+
+      const handleReadSentence = (sentenceObj, idx) => {
+        setActiveSentenceIdx(idx);
+        if (speechEnabled && sentenceObj && typeof sentenceObj.text === "string" && "speechSynthesis" in window) {
+          window.speechSynthesis.cancel();
+          const utter = new SpeechSynthesisUtterance(sentenceObj.text.slice(0, 4000));
+          utter.lang = "ar-SA";
+          utter.rate = 0.95;
+          window.speechSynthesis.speak(utter);
+        }
+      };
+
+      const completeLesson = (lesson) => {
+        let alreadyCompleted = false;
+        setData((prev) => {
+          const existing = prev.lessons.find((item) => item.id === lesson.id);
+          if (!existing || !Array.isArray(existing.completedBy)) return prev;
+          if (existing.completedBy.includes(currentStudent.id)) {
+            alreadyCompleted = true;
+            return prev;
+          }
+          return {
+            ...prev,
+            lessons: prev.lessons.map((item) => item.id === lesson.id
+              ? { ...item, completedBy: [...item.completedBy, currentStudent.id] }
+              : item),
+            students: prev.students.map((student) => student.id === currentStudent.id
+              ? { ...student, points: (Number(student.points) || 0) + (Number(lesson.xp) || 0) }
+              : student)
+          };
+        });
+        notify(alreadyCompleted ? "هذا الدرس مكتمل مسبقاً في سجلك" : `أحسنت! حصلت على +${lesson.xp} نقطة تميز`);
+      };
+
+      const submitAssignmentAnswer = (assign, optionIdx) => {
+        const isCorrect = optionIdx === assign.correctIndex;
+        const previousSubmission = assign.submissions && assign.submissions[currentStudent.id];
+        const wasAlreadyCorrect = Boolean(previousSubmission?.isCorrect || previousSubmission?.rewarded);
+        const shouldAward = isCorrect && !wasAlreadyCorrect;
+        setData((prev) => ({
+          ...prev,
+          assignments: prev.assignments.map((item) => item.id === assign.id
+            ? {
+                ...item,
+                submissions: {
+                  ...(item.submissions || {}),
+                  [currentStudent.id]: {
+                    optionIdx,
+                    isCorrect,
+                    rewarded: Boolean(previousSubmission?.rewarded || previousSubmission?.isCorrect || shouldAward)
+                  }
+                }
+              }
+            : item),
+          students: shouldAward
+            ? prev.students.map((student) => student.id === currentStudent.id
+                ? { ...student, points: (Number(student.points) || 0) + (Number(assign.xp) || 0) }
+                : student)
+            : prev.students
+        }));
+        notify(isCorrect
+          ? (shouldAward ? `إجابة صحيحة! أُضيفت +${assign.xp} نقطة` : "إجابة صحيحة، وقد سبق احتساب مكافأة هذا الواجب")
+          : "تم تسجيل إجابتك، راجع الدرس وحاول مجدداً");
+      };
+
+      const buildLocalAssistantReply = (question) => {
+        const q = question.toLocaleLowerCase("ar");
+        const marks = Array.isArray(currentStudent?.marks) ? currentStudent.marks : [];
+        const avg = marks.length ? Math.round(marks.reduce((sum, mark) => sum + (Number(mark.termWork) || 0) + (Number(mark.finalExam) || 0), 0) / marks.length) : 0;
+        const lessonText = (activeLesson?.sentences || []).map((sentence) => sentence.text).join(" ");
+        if (q.includes("معدل") || q.includes("درج") || q.includes("كشف")) {
+          return `المعدل الحالي للطالب في هذه النسخة التجريبية ${avg}%. مجموع كل مادة = أعمال السنة من 40 + الاختبار النهائي من 60. هذه الحسابات محلية وليست سجلاً مدرسياً معتمداً.`;
+        }
+        if (q.includes("تلخيص") || q.includes("لخص") || q.includes("اشرح") || q.includes("درس")) {
+          return lessonText ? `شرح الدرس «${activeLesson.title}» — ${activeLesson.subject}: ${lessonText}` : "افتح درساً يحتوي على نصوص حتى أتمكن من عرض محتواه.";
+        }
+        if (q.includes("اختبار") || q.includes("سؤال") || q.includes("تقويم")) {
+          const lines = (activeLesson?.sentences || []).slice(0, 3).map((sentence, index) => `${index + 1}. اكتب سؤالاً يختبر فهم الفكرة التالية: ${sentence.text}`);
+          return lines.length ? `أسئلة تدريبية أولية من محتوى الدرس:
+${lines.join("\n")}
+راجع صياغتها مع المعلم قبل اعتمادها.` : "لا يوجد محتوى كافٍ لتوليد أسئلة من الدرس الحالي.";
+        }
+        if (q.includes("جدول")) {
+          const gradeSchedule = data.scheduleByGrade?.[currentStudent?.grade] || data.schedule || [];
+          const days = ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
+          const lines = days.map((day) => {
+            const row = gradeSchedule.find((item) => item?.day === day);
+            return row ? `${day}: ${row.classes || row.subjects || "لم تُحدد الحصص"}` : `${day}: لا يوجد جدول محفوظ`;
+          });
+          return `جدول الصف ${currentStudent?.grade || "الحالي"} في هذه النسخة التجريبية:
+${lines.join("\n")}
+يمكن للمعلم أو المشرف تعديله من بوابة المعلم. هذه بيانات محلية على الجهاز.`;
+        }
+        if (role === "parent") return `ملخص متابعة تجريبي: الصف ${currentStudent.grade}، الحضور ${currentStudent.attendance}%. لا تعرض هذه النسخة التجريبية بيانات معتمدة.`;
+        if (role === "teacher" || role === "admin") return `يمكنك استخدام بوابة المعلم لإضافة درس وصف ومادة، أو إنشاء واجب تفاعلي. عدد الدروس المتاحة الآن ${data.lessons.length}.`;
+        return `أستطيع مساعدتك في فهم درس «${activeLesson?.title || "الدرس الحالي"}». اكتب «اشرح الدرس» أو «لخص الدرس» أو «أنشئ أسئلة».`;
+      };
+
+      const requestRemoteAssistant = async (question) => {
+        const provider = aiSettings.provider;
+        const curriculumContext = `أنت مساعد تعليمي عربي لمنصة مدرسة النور. الصف: ${currentStudent?.grade || "غير محدد"}. الدرس المفتوح: ${activeLesson?.title || "غير محدد"}. المادة: ${activeLesson?.subject || "غير محددة"}. نص الدرس: ${(activeLesson?.sentences || []).map((sentence) => sentence.text).join(" ").slice(0, 3000)}.
+اشرح بأسلوب مناسب للصف. في المسائل الرياضية اعرض الحل خطوة بخطوة. في النحو اذكر القاعدة والمثال والإعراب. أنشئ أسئلة تدريبية عند طلب المعلم. لا تخترع رقم صفحة أو نصاً من كتاب رسمي غير مرفق. اذكر عند الحاجة أن المعلم يجب أن يراجع توافق الإجابة مع طبعة المنهج اليمني.`;
+        if (provider === "gemini") {
+          if (!aiSettings.geminiKey.trim()) throw new Error("أدخل مفتاح Gemini في إعدادات المساعد أولاً.");
+          const model = (aiSettings.geminiModel || "gemini-3.8-flash").trim();
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+            method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": aiSettings.geminiKey.trim() },
+            body: JSON.stringify({ systemInstruction: { parts: [{ text: curriculumContext }] }, contents: [{ role: "user", parts: [{ text: question }] }], generationConfig: { temperature: 0.35, maxOutputTokens: 900 } })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(payload?.error?.message || `Gemini HTTP ${response.status}`);
+          const output = payload?.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join("\n").trim();
+          if (!output) throw new Error("لم يرجع Gemini إجابة نصية.");
+          return output;
+        }
+        if (provider === "groq") {
+          const key = aiSettings.groqKey.trim();
+          const model = aiSettings.groqModel.trim();
+          if (!key) throw new Error("أدخل مفتاح Groq في إعدادات المساعد أولاً.");
+          if (!model) throw new Error("اختر معرّف نموذج متاحاً في حساب Groq.");
+          const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+            body: JSON.stringify({ model, messages: [{ role: "system", content: curriculumContext }, { role: "user", content: question }], temperature: 0.35, max_tokens: 900 })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(payload?.error?.message || `Groq HTTP ${response.status}`);
+          const output = payload?.choices?.[0]?.message?.content;
+          if (typeof output !== "string" || !output.trim()) throw new Error("لم يرجع Groq إجابة نصية.");
+          return output.trim();
+        }
+        if (provider === "pollinations") {
+          const token = pollinationsToken;
+          const model = (aiSettings.pollinationsModel || "openai/gpt-5.4-nano").trim();
+          if (!token) throw new Error("اربط حساب Pollinations أولاً من إعدادات المساعد. الربط يطلب موافقتك وحد إنفاق قبل إرسال الطلبات.");
+          const response = await fetch("https://gen.pollinations.ai/v1/chat/completions", {
+            method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+            body: JSON.stringify({ model, messages: [{ role: "system", content: curriculumContext }, { role: "user", content: question }], temperature: 0.35, max_tokens: 900 })
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(payload?.error?.message || `Pollinations HTTP ${response.status}`);
+          const output = payload?.choices?.[0]?.message?.content;
+          if (typeof output !== "string" || !output.trim()) throw new Error("لم يرجع Pollinations إجابة نصية.");
+          return output.trim();
+        }
+        return buildLocalAssistantReply(question);
+      };
+
+      const sendAiMessage = async (customPrompt) => {
+        const q = String(customPrompt || aiInput).trim().slice(0, 500);
+        if (!q || !role || aiBusy) return;
+        setAiInput("");
+        setAiHistoryByRole((prev) => ({ ...prev, [role]: [...(prev[role] || []), { sender: "user", text: q }] }));
+        setAiBusy(true);
+        let reply = "";
+        try {
+          if (aiSettings.provider === "local") reply = buildLocalAssistantReply(q);
+          else {
+            try { reply = await requestRemoteAssistant(q); }
+            catch (error) {
+              console.warn("تعذر الاتصال بمحرك AI الخارجي؛ تم الرجوع إلى المحرك المحلي.", error);
+              reply = `تعذر الاتصال بالخدمة الخارجية، لذلك استخدمت المساعد المحلي دون إنترنت.
+
+${buildLocalAssistantReply(q)}
+
+تفصيل الاتصال: ${String(error.message || "خطأ اتصال").slice(0, 180)}`;
+            }
+          }
+        } finally {
+          setAiHistoryByRole((prev) => ({ ...prev, [role]: [...(prev[role] || []), { sender: "ai", text: reply || buildLocalAssistantReply(q) }] }));
+          setAiBusy(false);
+        }
+      };
+
+      const getGradeLabel = (total) => {
+        if (total >= 90) return "ممتاز";
+        if (total >= 80) return "جيد جداً";
+        if (total >= 70) return "جيد";
+        if (total >= 50) return "مقبول";
+        return "يحتاج متابعة";
+      };
+
+      /* =======================================================================
+         واجهة 1: شاشة تسجيل الدخول الذكية المخصصة لكل بوابة
+      ======================================================================= */
+      if (!role) {
+        const portalRoles = [
+          { id: "student", label: "الطالب", icon: "student", desc: "الدروس 3D والدرجات" },
+          { id: "parent", label: "ولي الأمر", icon: "parent", desc: "متابعة الأبناء والحضور" },
+          { id: "teacher", label: "المعلم", icon: "teacher", desc: "رصد الدرجات والواجبات" },
+          { id: "admin", label: "الإدارة", icon: "admin", desc: "الإشراف العام والتقارير" }
+        ];
+
+        return (
+          <div className="min-h-[100dvh] flex flex-col justify-center px-4 py-6 max-w-[540px] mx-auto">
+            <div className="card p-5 sm:p-6 space-y-5 relative overflow-hidden">
+              {/* الشعار الرسمي مع هالة دوّارة */}
+              <div className="flex flex-col items-center text-center space-y-2">
+                <div className="relative w-[104px] h-[104px] flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-full border-2 border-dashed border-[#C9A227] spin-slow" />
+                  <SchoolEmblemSVG size={90} />
+                </div>
+                <h1 className="font-display text-[28px] font-black text-[#E8C84A] leading-tight">
+                  مدرسة النور الذكية
+                </h1>
+                <p className="text-xs font-bold text-[var(--muted)]">
+                  عزلة شباع • مديرية حبيش • إب — البوابة التعليمية والإدارية الموحدة
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={handleInstallApp}
+                  disabled={appInstalled || isStandaloneApp}
+                  className="btn btn-gold w-full flex items-center justify-center text-sm sm:text-base shadow-lg"
+                >
+                  {appInstalled || isStandaloneApp ? "تطبيق مدرسة النور مثبت على الهاتف" : "تثبيت تطبيق مدرسة النور على الهاتف"}
+                </button>
+                {showInstallGuidance && !appInstalled && !isStandaloneApp && (
+                  <div role="status" aria-live="polite" className="school-notice rounded-xl border p-3 text-xs font-bold leading-6">
+                    {isEmbeddedBrowser
+                      ? "اضغط على النقاط الثلاث في الأعلى واختر الفتح في المتصفح لتثبيت التطبيق"
+                      : (/iPhone|iPad|iPod/i.test(navigator.userAgent || "")
+                        ? "في Safari اضغط على زر المشاركة ثم اختر إضافة إلى الشاشة الرئيسية لتثبيت التطبيق"
+                        : "افتح قائمة المتصفح واختر تثبيت التطبيق أو إضافة إلى الشاشة الرئيسية")}
+                  </div>
+                )}
+              </div>
+
+              <div role="note" className="rounded-xl border border-amber-500/60 bg-amber-500/10 p-3 text-xs font-bold leading-6 text-[var(--ink)]">
+                نسخة تجريبية فقط. تسجيل الدخول والصلاحيات والتخزين تعمل داخل المتصفح ويمكن التلاعب بها. لا تُدخل بيانات طلاب حقيقية أو درجات أو أرقام هواتف.
+              </div>
+
+              {/* شريط إحصائيات حي */}
+              <div className="grid grid-cols-3 gap-2 p-2.5 rounded-2xl bg-[var(--surface2)] border border-[var(--line)] text-center">
+                <div>
+                  <div className="text-base font-black text-[#E8C84A]">{data.students.length}</div>
+                  <div className="text-[11px] font-bold text-[var(--muted)]">الطلاب النشطون</div>
+                </div>
+                <div className="border-x border-[var(--line)]">
+                  <div className="text-base font-black text-[#7A8A44]">{data.lessons.length}</div>
+                  <div className="text-[11px] font-bold text-[var(--muted)]">دروس 3D تفاعلية</div>
+                </div>
+                <div>
+                  <div className="text-base font-black text-[#E8C84A]">محلي</div>
+                  <div className="text-[11px] font-bold text-[var(--muted)]">حفظ تجريبي محلي</div>
+                </div>
+              </div>
+
+              <div className="school-notice rounded-xl p-3 text-xs font-bold leading-6" role="note">
+                نسخة عرض عامة وتجريبية. بيانات الدخول والدرجات تحفظ محلياً ويمكن فحصها من المتصفح. لا تستخدم بيانات طلاب حقيقية قبل ربط المنصة بخادم مصادقة وقاعدة بيانات.
+              </div>
+
+              {/* اختيار نوع البوابة */}
+              <div>
+                <div className="text-xs font-extrabold text-[var(--muted)] mb-2">اختر بوابة الدخول المناسبة لصلاحيتك:</div>
+                <div className="grid grid-cols-2 gap-2.5">
+                  {portalRoles.map((item) => {
+                    const isSelected = loginTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => selectLoginRole(item.id)}
+                        className={`p-3 rounded-2xl border text-start flex items-center gap-2.5 transition-all ${
+                          isSelected
+                            ? "bg-gradient-to-l from-[#5A6B2F]/40 to-[var(--surface2)] border-2 border-[#E8C84A] shadow-md"
+                            : "bg-[var(--surface2)] border-[var(--line)] opacity-85 hover:opacity-100"
+                        }`}
+                      >
+                        <SmartEmojiBadge icon={item.icon} active={isSelected} size={40} />
+                        <div className="min-w-0">
+                          <div className="text-sm font-black text-[var(--ink)]">{item.label}</div>
+                          <div className="text-[11px] font-bold text-[var(--muted)] truncate">{item.desc}</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* نموذج تسجيل الدخول الذكي المخصص لكل فئة */}
+              <form onSubmit={handleSmartLogin} className="space-y-3 pt-1">
+                <div>
+                  <label htmlFor="login-id" className="block text-xs font-extrabold text-[var(--muted)] mb-1">
+                    {loginTab === "student" && "رقم قيد الطالب الأكاديمي"}
+                    {loginTab === "parent" && "رقم قيد الابن في المدرسة"}
+                    {loginTab === "teacher" && "الرقم الوظيفي للمعلم"}
+                    {loginTab === "admin" && "معرّف الإدارة والمشرف العام"}
+                  </label>
+                  <input
+                    id="login-id"
+                    type="text"
+                    autoComplete="username"
+                    maxLength={80}
+                    className="input font-bold"
+                    value={loginId}
+                    onChange={(e) => setLoginId(e.target.value)}
+                    placeholder="أدخل المعرّف..."
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="login-secret" className="block text-xs font-extrabold text-[var(--muted)] mb-1">
+                    {loginTab === "student" && "الرمز السري للطالب (PIN)"}
+                    {loginTab === "parent" && "رقم هاتف ولي الأمر المسجل"}
+                    {loginTab === "teacher" && "كلمة مرور الكادر التعليمي"}
+                    {loginTab === "admin" && "رمز الصلاحية الإدارية"}
+                  </label>
+                  <input
+                    id="login-secret"
+                    type="password"
+                    autoComplete="current-password"
+                    maxLength={128}
+                    className="input font-bold"
+                    value={loginSecret}
+                    onChange={(e) => setLoginSecret(e.target.value)}
+                    placeholder="••••"
+                    required
+                  />
+                </div>
+
+                {loginError && (
+                  <div role="alert" aria-live="polite" className="p-2.5 rounded-xl bg-[#8A4A22]/25 border border-[#8A4A22] text-xs font-bold text-[#F0D25E]">
+                    {loginError}
+                  </div>
+                )}
+
+                <button type="submit" className="btn btn-gold w-full flex items-center justify-center gap-2 text-base">
+                  <SmartGlyph name="lock" size={18} color="#2A2118" />
+                  <span>تسجيل الدخول إلى {portalRoles.find((r) => r.id === loginTab)?.label}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleQuickDemoLogin}
+                  className="btn btn-olive w-full flex items-center justify-center gap-2 text-sm sm:text-base"
+                >
+                  <SmartGlyph name="star" size={17} />
+                  <span>دخول تجريبي سريع بضغطة واحدة</span>
+                </button>
+                <p className="text-center text-[11px] font-bold text-[var(--muted)]">
+                  بيانات العرض معبأة مسبقاً ويمكنك تعديلها قبل تسجيل الدخول.
+                </p>
+              </form>
+            </div>
+          </div>
+        );
+      }
+
+      /* =======================================================================
+         واجهة 2: التطبيق الداخلي بعد تسجيل الدخول (Header + Portals + AI)
+      ======================================================================= */
+      const studentTabsList = [
+        { id: "lessons", label: "دروسي 3D", icon: "lab3d" },
+        { id: "tasks", label: "واجباتي", icon: "tasks" },
+        { id: "grades", label: "درجاتي", icon: "grades" },
+        { id: "awards", label: "جوائزي", icon: "trophy" },
+        { id: "school", label: "مدرستي", icon: "school" },
+        { id: "settings", label: "الإعدادات", icon: "settings" }
+      ];
+
+      const roleTitleMap = {
+        student: "بوابة الطالب",
+        parent: "بوابة ولي الأمر",
+        teacher: "بوابة المعلم",
+        admin: "بوابة المشرف العام"
+      };
+
+      const roleAiPrompts = {
+        student: ["لخّص لي الدرس الحالي", "اشرح الفكرة خطوة بخطوة", "أنشئ أسئلة تدريبية"],
+        parent: ["اشرح طريقة حساب الدرجات", "كيف أتابع الواجبات؟"],
+        teacher: ["أنشئ أسئلة اختبار من الدرس", "اشرح فكرة الدرس للطلاب"],
+        admin: ["تقرير المدرسة العام", "حالة الإعلانات والطلاب"]
+      };
+
+      return (
+        <div className={`min-h-[100dvh] max-w-[680px] mx-auto pb-28 ${role === "student" ? "student-app-root" : ""}`}>
+          {/* الشريط العلوي المتناسق بدون أي التفاف أو تكرار */}
+          <header className="sticky top-0 z-30 bg-[var(--paper)]/95 backdrop-blur border-b border-[var(--line)] px-4 py-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <SchoolEmblemSVG size={44} />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-display text-lg font-black text-[#E8C84A] truncate">مدرسة النور</span>
+                  <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-[var(--surface2)] border border-[var(--gold)] text-[var(--ink)] shrink-0">
+                    {roleTitleMap[role]}
+                  </span>
+                </div>
+                <div className="text-[11px] font-bold text-[var(--muted)] truncate">
+                  عزلة شباع • مديرية حبيش • إب
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setRole(null);
+                setAiOpen(false);
+              }}
+              className="px-3.5 py-2 rounded-xl bg-[#8A4A22] text-[#FFF8E6] text-xs font-black shrink-0 flex items-center gap-1.5 hover:brightness-110"
+            >
+              <span>خروج</span>
+              <span>↩</span>
+            </button>
+          </header>
+
+          {/* إشعار عائم */}
+          {toast && (
+            <div role="status" aria-live="polite" className={`app-toast ${role === "student" ? "student-mode" : ""}`}>
+              {toast}
+            </div>
+          )}
+
+          {/* المحتوى حسب البوابة */}
+          <main className="px-4 pt-4 space-y-4">
+            {/* ==================== بوابة الطالب ==================== */}
+            {role === "student" && (
+              <>
+                {/* بطاقة الطالب المنسقة بالكامل */}
+                <div className="card p-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <SmartEmojiBadge icon="student" active size={48} />
+                    <div className="min-w-0 flex-1">
+                      <h2 className="text-base sm:text-lg font-black text-[var(--ink)] leading-snug">
+                        {currentStudent.name}
+                      </h2>
+                      <p className="text-xs font-bold text-[var(--muted)]">{currentStudent.grade}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-[var(--line)]">
+                    <span className="text-xs font-extrabold text-[var(--muted)]">
+                      رقم القيد: <strong className="text-[var(--ink)]">{currentStudent.id}</strong>
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FFF3B0] text-[#2A2118] text-xs font-black">
+                      <SmartGlyph name="star" size={14} color="#8A4A22" />
+                      <span>{currentStudent.points} نقطة تميز</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* تبويب 1: الدروس والمختبر ثلاثي الأبعاد */}
+                {studentTab === "lessons" && (
+                  <div className="space-y-4">
+                    <div className="card p-3 space-y-3">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <h3 className="font-black text-sm text-[#E8C84A]">منهج {currentStudent.grade}</h3>
+                        <a href={CURRICULUM_BOOKS_URL} target="_blank" rel="noopener noreferrer" className="text-xs font-bold underline">الكتب الدراسية الرسمية</a>
+                      </div>
+                      <input type="search" className="input text-sm" maxLength={100} placeholder="ابحث باسم الدرس أو المادة أو أي كلمة داخل الشرح..." value={lessonSearch} onChange={(event) => setLessonSearch(event.target.value)} aria-label="البحث في دروس الطالب" />
+                      <div className="curriculum-filters" role="group" aria-label="تصفية الدروس حسب المادة">
+                        {[
+                          "الكل", ...CURRICULUM_SUBJECTS
+                        ].map((subject) => <button key={subject} type="button" aria-pressed={lessonSubjectFilter === subject} onClick={() => setLessonSubjectFilter(subject)}>{subject}</button>)}
+                      </div>
+                      <p className="source-note">{CURRICULUM_NOTICE}</p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {visibleStudentLessons.map((lesson) => {
+                        const isDone = lesson.completedBy.includes(currentStudent.id);
+                        const isSelected = activeLesson.id === lesson.id;
+                        return (
+                          <button
+                            key={lesson.id}
+                            type="button"
+                            onClick={() => {
+                              setActiveLessonId(lesson.id);
+                              setActiveSentenceIdx(0);
+                            }}
+                            className={`card p-3.5 text-start flex items-center gap-3 transition-all ${
+                              isSelected ? "border-2 border-[#E8C84A]" : ""
+                            }`}
+                          >
+                            <SmartEmojiBadge icon={lesson.modelType === "geometry" ? "grades" : "lab3d"} active={isSelected} size={44} />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-1 mb-1">
+                                <span className="text-[11px] font-black text-[#E8C84A]">+{lesson.xp} XP</span>
+                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${isDone ? "bg-[#5A6B2F] text-white" : "bg-[var(--surface2)] text-[var(--muted)]"}`}>
+                                  {isDone ? "مكتمل" : "متاح"}
+                                </span>
+                              </div>
+                              <div className="text-sm font-black text-[var(--ink)] truncate">{lesson.title}</div>
+                              <div className="text-[11px] font-bold text-[var(--muted)]">{lesson.subject}</div>
+                              {lesson.source && <div className="text-[10px] font-bold text-[var(--muted)]">{lesson.source}</div>}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {visibleStudentLessons.length === 0 && <div className="card p-4 text-center text-sm font-bold text-[var(--muted)]">لا توجد دروس مطابقة للبحث أو المادة المختارة في صفك الدراسي.</div>}
+
+                    {/* القارئ التفاعلي باللمس والنطق الصوتي */}
+                    <div className="card p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-base font-black text-[#E8C84A]">{activeLesson.title}</h3>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const sentence = Array.isArray(activeLesson.sentences) ? activeLesson.sentences[activeSentenceIdx] : null;
+                            if (sentence) handleReadSentence(sentence, activeSentenceIdx);
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-[var(--surface2)] border border-[var(--gold)] text-xs font-black flex items-center gap-1.5"
+                        >
+                          <SmartGlyph name="sound" size={15} color="#E8C84A" />
+                          <span>استماع</span>
+                        </button>
+                      </div>
+
+                      <div className="space-y-2">
+                        {(Array.isArray(activeLesson.sentences) ? activeLesson.sentences : []).map((s, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => handleReadSentence(s, idx)}
+                            className={`p-3 rounded-2xl border cursor-pointer transition-all ${
+                              activeSentenceIdx === idx
+                                ? "bg-[#5A6B2F]/25 border-[#E8C84A]"
+                                : "bg-[var(--surface2)] border-[var(--line)]"
+                            }`}
+                          >
+                            <p className="text-sm font-bold leading-7">{s.text}</p>
+                            {activeSentenceIdx === idx && (
+                              <p className="text-xs font-extrabold text-[#F0D25E] mt-1.5 pt-1.5 border-t border-[var(--line)]">
+                                إضاءة معرفية: {s.hint}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* بنك الاختبارات القصيرة المرتبط بكل درس */}
+                      <section className="rounded-2xl border border-[var(--gold)] bg-[var(--surface2)] p-3 space-y-3" aria-label="اختبار قصير للدرس">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <h4 className="text-sm font-black text-[#E8C84A]">اختبر فهمك للدرس</h4>
+                          <span className="text-[10px] font-black text-[var(--muted)]">+{activeLessonQuizzes.reduce((sum, q) => sum + (Number(q.xp) || 10), 0)} XP متاح</span>
+                        </div>
+                        {activeLessonQuizzes.map((quiz, quizIndex) => {
+                          const key = `${activeLesson.id}:${quiz.id || quizIndex}`;
+                          const result = quizResults[key];
+                          const rewarded = (activeLesson.quizCompletedBy || []).includes(currentStudent.id);
+                          return (
+                            <div key={key} className="space-y-2">
+                              <p className="text-xs font-black leading-6">{quiz.question}</p>
+                              <div className="grid grid-cols-1 gap-2">
+                                {quiz.options.map((option, optionIndex) => (
+                                  <button key={optionIndex} type="button" aria-pressed={String(quizAnswers[key]) === String(optionIndex)} onClick={() => { setQuizAnswers((prev) => ({ ...prev, [key]: optionIndex })); setQuizResults((prev) => { const next = { ...prev }; delete next[key]; return next; }); }} className="alnoor-quiz-option w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-start text-xs font-bold">
+                                    {option}
+                                  </button>
+                                ))}
+                              </div>
+                              <button type="button" onClick={() => submitLessonQuiz(activeLesson, quiz, quizIndex)} className="btn btn-gold w-full text-xs">تصحيح الإجابة واحتساب نقاط التميز</button>
+                              {result && <p role="status" className={`text-xs font-black ${result.correct ? "text-[#7A8A44]" : "text-[#D88A55]"}`}>{result.correct ? `إجابة صحيحة${rewarded ? " — سبق احتساب النقاط" : ""}` : `الإجابة الصحيحة: ${quiz.options[result.answer]}`}</p>}
+                            </div>
+                          );
+                        })}
+                        {activeLessonQuizzes.length === 0 && <p className="text-xs font-bold text-[var(--muted)]">لا توجد أسئلة في هذا الدرس بعد.</p>}
+                      </section>
+
+                      {/* المختبر ثلاثي الأبعاد المدمج */}
+                      <Interactive3DLab modelType={activeLesson.modelType} autoRotate={autoRotate3D} />
+
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setAutoRotate3D((v) => !v)}
+                          className="btn btn-ghost text-xs py-2 px-3"
+                        >
+                          {autoRotate3D ? "إيقاف التدوير التلقائي" : "تشغيل التدوير التلقائي"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => completeLesson(activeLesson)}
+                          disabled={activeLesson.completedBy.includes(currentStudent.id)}
+                          className="btn btn-olive text-xs py-2 px-4 disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {activeLesson.completedBy.includes(currentStudent.id) ? "الدرس مكتمل" : `إتمام الدرس وكسب +${activeLesson.xp} نقطة`}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* تبويب 2: الواجبات والاختبارات */}
+                {studentTab === "tasks" && (
+                  <div className="space-y-3">
+                    {visibleStudentAssignments.map((assign) => {
+                      const sub = assign.submissions[currentStudent.id];
+                      return (
+                        <div key={assign.id} className="card p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-black text-[#E8C84A]">{assign.subject}</span>
+                            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[var(--surface2)]">
+                              +{assign.xp} نقطة
+                            </span>
+                          </div>
+                          <h3 className="text-sm font-black">{assign.title}</h3>
+                          <p className="text-sm font-bold text-[var(--muted)]">{assign.question}</p>
+                          <div className="grid grid-cols-1 gap-2">
+                            {assign.options.map((opt, idx) => {
+                              const chosen = sub && sub.optionIdx === idx;
+                              return (
+                                <button
+                                  key={idx}
+                                  type="button"
+                                  onClick={() => submitAssignmentAnswer(assign, idx)}
+                                  className={`p-3 rounded-xl border text-start text-sm font-bold transition-all ${
+                                    chosen
+                                      ? sub.isCorrect
+                                        ? "bg-[#5A6B2F] text-white border-[#E8C84A]"
+                                        : "bg-[#8A4A22] text-white border-[#E8C84A]"
+                                      : "bg-[var(--surface2)] border-[var(--line)] hover:border-[var(--gold)]"
+                                  }`}
+                                >
+                                  {opt}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {visibleStudentAssignments.length === 0 && <div className="card p-4 text-center text-sm font-bold text-[var(--muted)]">لا توجد واجبات منشورة لهذا الصف حالياً.</div>}
+                  </div>
+                )}
+
+                {/* تبويب 3: سجل الدرجات (40 + 60 = 100) */}
+                {studentTab === "grades" && (
+                  <div className="card p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-base font-black text-[#E8C84A]">كشف الدرجات الفصلي (40 + 60)</h3>
+                      <span className="text-xs font-black px-2.5 py-1 rounded-full bg-[#5A6B2F] text-white">ناجح</span>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs sm:text-sm border-collapse">
+                        <thead>
+                          <tr className="border-b border-[var(--line)] text-[var(--muted)]">
+                            <th className="py-2 text-start font-black">المادة الدراسية</th>
+                            <th className="py-2 text-center font-black">أعمال (40)</th>
+                            <th className="py-2 text-center font-black">نهائي (60)</th>
+                            <th className="py-2 text-center font-black">المجموع</th>
+                            <th className="py-2 text-center font-black">التقدير</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {currentStudent.marks.map((m, idx) => {
+                            const total = Number(m.termWork) + Number(m.finalExam);
+                            return (
+                              <tr key={idx} className="border-b border-[var(--line)]/60">
+                                <td className="py-2.5 font-extrabold">{m.subject}</td>
+                                <td className="py-2.5 text-center font-bold">{m.termWork}</td>
+                                <td className="py-2.5 text-center font-bold">{m.finalExam}</td>
+                                <td className="py-2.5 text-center font-black text-[#E8C84A]">{total}</td>
+                                <td className="py-2.5 text-center font-bold text-[#7A8A44]">{getGradeLabel(total)}</td>
+                              </tr>
+                            );                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* تبويب 4: الجوائز والأوسمة */}
+                {studentTab === "awards" && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {[
+                      { title: "وسام المستكشف العلمي", desc: "إتمام أول تجربة في المختبر ثلاثي الأبعاد", unlocked: true },
+                      { title: "وسام القارئ الذكي", desc: "استخدام القارئ التفاعلي والاستماع الصوتي", unlocked: true },
+                      { title: "وسام التميز الأكاديمي", desc: "تحقيق أكثر من 140 نقطة تميز", unlocked: currentStudent.points >= 140 },
+                      { title: "وسام سفير مدرسة النور", desc: "إتمام جميع دروس الفصل الدراسي", unlocked: currentStudent.points >= 200 }
+                    ].map((badge, i) => (
+                      <div key={i} className={`card p-4 flex items-center gap-3 ${badge.unlocked ? "" : "opacity-55"}`}>
+                        <SmartEmojiBadge icon="trophy" active={badge.unlocked} size={46} />
+                        <div>
+                          <div className="text-sm font-black">{badge.title}</div>
+                          <div className="text-xs font-bold text-[var(--muted)]">{badge.desc}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* تبويب 5: مدرستي */}
+                {studentTab === "school" && (
+                  <div className="space-y-3">
+                    <div className="card p-4 space-y-2">
+                      <h3 className="text-base font-black text-[#E8C84A]">عن مدرسة النور</h3>
+                      <p className="text-xs sm:text-sm leading-6 font-bold text-[var(--muted)]">
+                        صرح تعليمي رائد في عزلة شباع بمديرية حبيش — محافظة إب، يجمع بين الأصالة التربوية وأحدث تقنيات التعليم التفاعلي ثلاثي الأبعاد.
+                      </p>
+                    </div>
+                    <section className="alnoor-student-id" aria-label="البطاقة المدرسية الرقمية">
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div className="flex items-center gap-2"><SchoolEmblemSVG size={40} /><div><div className="font-black text-[#E8C84A]">البطاقة المدرسية الرقمية</div><div className="text-[10px] font-bold text-[var(--muted)]">مدرسة النور</div></div></div>
+                        <div className="text-sm font-black">{currentStudent.name}</div>
+                        <div className="text-xs font-bold text-[var(--muted)]">{currentStudent.grade}</div>
+                        <div className="text-xs font-black">رقم القيد: <span dir="ltr">{currentStudent.id}</span></div>
+                        <div className="text-[11px] font-bold text-[var(--muted)]">الحضور المسجل: {currentStudent.attendance}%</div>
+                      </div>
+                      <div className="space-y-1 text-center"><div ref={idQrRef} className="alnoor-student-id-qr" aria-label="رمز تعريف الطالب"/><div className="text-[9px] font-black text-[var(--muted)]">رمز تعريف الطالب</div></div>
+                    </section>
+                    <div className="card p-4 space-y-2">
+                      <h3 className="text-base font-black text-[#E8C84A]">الإعلانات المدرسية</h3>
+                      {data.announcements.map((an) => (
+                        <div key={an.id} className="p-3 rounded-2xl bg-[var(--surface2)] border border-[var(--line)]">
+                          <div className="flex items-center justify-between text-xs font-black text-[#E8C84A]">
+                            <span>{an.title}</span>
+                            <span>{an.date}</span>
+                          </div>
+                          <p className="text-xs font-bold mt-1 leading-5">{an.body}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="card p-4 space-y-2">
+                      <h3 className="text-base font-black text-[#E8C84A]">جدول الحصص الأسبوعي — {currentStudent.grade}</h3>
+                      {(data.scheduleByGrade?.[currentStudent.grade] || data.schedule || []).map((row, idx) => (
+                        <div key={`${row.day}-${idx}`} className="flex items-start justify-between gap-3 p-2.5 rounded-xl bg-[var(--surface2)] text-xs font-bold">
+                          <span className="font-black text-[#E8C84A] w-16 shrink-0">{row.day}</span>
+                          <span className="flex-1 text-end leading-6">{row.classes || "لم يحدد المعلم الحصص بعد"}</span>
+                        </div>
+                      ))}
+                      <p className="text-[10px] font-bold text-[var(--muted)]">الجدول نموذج محلي قابل لتعديل المعلم، وليس جدولاً رسمياً معتمداً حتى تنشره إدارة المدرسة.</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* تبويب 6: الإعدادات (الوضع الداكن كخيار افتراضي + الخط + الصوت) */}
+                {studentTab === "settings" && (
+                  <div className="card p-4 space-y-4">
+                    <h3 className="text-base font-black text-[#E8C84A]">إعدادات التطبيق وإمكانية الوصول</h3>
+                    <div className="flex items-center justify-between p-3 rounded-2xl bg-[var(--surface2)]">
+                      <div>
+                        <div className="text-sm font-black">الوضع الداكن (الافتراضي)</div>
+                        <div className="text-xs font-bold text-[var(--muted)]">مريح للعين ومناسب للدراسة الليلية</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setDarkMode((d) => !d)}
+                        className="btn btn-gold text-xs py-2 px-4"
+                      >
+                        {darkMode ? "مفعّل (داكن)" : "نهاري"}
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 rounded-2xl bg-[var(--surface2)]">
+                      <div>
+                        <div className="text-sm font-black">حجم خط القراءة</div>
+                        <div className="text-xs font-bold text-[var(--muted)]">تكبير النصوص لوضوح أعلى</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setFontScale((f) => (f === "normal" ? "large" : "normal"))}
+                        className="btn btn-ghost text-xs py-2 px-4"
+                      >
+                        {fontScale === "large" ? "خط كبير" : "خط قياسي"}
+                      </button>
+                    </div>
+
+                    <div className="card p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div>
+                          <div className="text-sm font-black">تطبيق مدرسة النور القابل للتثبيت</div>
+                          <div className="text-xs font-bold text-[var(--muted)]">الإصدار {APP_VERSION} • {pwaReady ? "خدمة التطبيق جاهزة" : "يجري تجهيز العمل دون اتصال"}</div>
+                        </div>
+                        <span className="chip">PWA</span>
+                      </div>
+                      <div className="space-y-2">
+                        <button
+                          type="button"
+                          onClick={handleInstallApp}
+                          disabled={appInstalled || isStandaloneApp}
+                          className="btn btn-gold w-full text-sm shadow-md"
+                        >
+                          {appInstalled || isStandaloneApp ? "تطبيق مدرسة النور مثبت على الهاتف" : "تثبيت تطبيق مدرسة النور على الهاتف"}
+                        </button>
+                        {showInstallGuidance && !appInstalled && !isStandaloneApp && (
+                          <div role="status" aria-live="polite" className="school-notice rounded-xl border p-3 text-xs font-bold leading-6">
+                            {isEmbeddedBrowser
+                              ? "اضغط على النقاط الثلاث في الأعلى واختر الفتح في المتصفح لتثبيت التطبيق"
+                              : (/iPhone|iPad|iPod/i.test(navigator.userAgent || "")
+                                ? "في Safari اضغط على زر المشاركة ثم اختر إضافة إلى الشاشة الرئيسية لتثبيت التطبيق"
+                                : "افتح قائمة المتصفح واختر تثبيت التطبيق أو إضافة إلى الشاشة الرئيسية")}
+                          </div>
+                        )}
+                      </div>
+                      <div className="pwa-actions">
+                        <button type="button" onClick={handleCheckForUpdates} className="btn btn-olive text-xs">{pwaUpdateAvailable ? "تثبيت التحديث" : "التحقق من التحديثات"}</button>
+                      </div>
+                      <p className="text-[11px] font-bold text-[var(--muted)]">التحديثات لا تمسح سجل المتصفح المحلي عمداً. احتفظ بنسخة احتياطية من بيانات التجربة قبل تغيير الجهاز أو مسح بيانات المتصفح.</p>
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 rounded-2xl bg-[var(--surface2)]">
+                      <div>
+                        <div className="text-sm font-black">النطق الصوتي العربي</div>
+                        <div className="text-xs font-bold text-[var(--muted)]">قراءة الجمل عند لمسها في الدروس</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSpeechEnabled((s) => !s)}
+                        className="btn btn-olive text-xs py-2 px-4"
+                      >
+                        {speechEnabled ? "مفعّل" : "متوقف"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ==================== بوابة ولي الأمر ==================== */}
+            {role === "parent" && (
+              <div className="space-y-4">
+                <div className="card p-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <SmartEmojiBadge icon="parent" active size={48} />
+                    <div>
+                      <h2 className="text-base font-black">متابعة الطالب: {currentStudent.name}</h2>
+                      <p className="text-xs font-bold text-[var(--muted)]">
+                        {currentStudent.grade} • نسبة الحضور: <strong className="text-[#7A8A44]">{currentStudent.attendance}%</strong>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-2xl bg-[var(--surface2)] border border-[var(--line)] text-xs font-bold">
+                    ملاحظة المعلم: <span className="text-[#E8C84A]">{currentStudent.teacherNote}</span>
+                  </div>
+                </div>
+
+                <div className="card p-4 space-y-2">
+                  <h3 className="text-sm font-black text-[#E8C84A]">ملخص الدرجات المعتمدة (من 100)</h3>
+                  {currentStudent.marks.map((m, i) => (
+                    <div key={i} className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--surface2)] text-xs font-bold">
+                      <span>{m.subject}</span>
+                      <span className="font-black text-[#E8C84A]">{Number(m.termWork) + Number(m.finalExam)} / 100</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="card p-4 space-y-3">
+                  <h3 className="text-sm font-black text-[#E8C84A]">إرسال رسالة إلى إدارة المدرسة أو المعلم</h3>
+                  <textarea
+                    rows="3"
+                    maxLength={1200}
+                    className="input text-sm"
+                    placeholder="اكتب رسالتك أو استفسارك هنا..."
+                    value={parentMsgText}
+                    onChange={(e) => setParentMsgText(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!parentMsgText.trim()) return;
+                      setData((prev) => ({
+                        ...prev,
+                        parentMessages: [
+                          { id: Date.now().toString(), from: `ولي أمر ${currentStudent.name}`, text: parentMsgText.trim(), time: "الآن" },
+                          ...prev.parentMessages
+                        ]
+                      }));
+                      setParentMsgText("");
+                      notify("تم إرسال رسالتك إلى المدرسة بنجاح");
+                    }}
+                    className="btn btn-gold w-full text-sm"
+                  >
+                    إرسال الرسالة الآن
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ==================== بوابة المعلم ==================== */}
+            {role === "teacher" && (
+              <div className="space-y-4">
+                <div className="card p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <h2 className="text-base font-black text-[#E8C84A]">إدارة الدروس والمناهج</h2>
+                    <a href={CURRICULUM_BOOKS_URL} target="_blank" rel="noopener noreferrer" className="text-xs font-bold underline">فتح المقررات الرسمية</a>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <select className="input text-sm" value={teacherCurriculumGrade} onChange={(event) => setTeacherCurriculumGrade(event.target.value)} aria-label="الصف الذي تديره">
+                      {CURRICULUM_GRADES.map((grade) => <option key={grade} value={grade}>{grade}</option>)}
+                    </select>
+                    <input className="input text-sm" type="search" maxLength={100} value={teacherLessonSearch} onChange={(event) => setTeacherLessonSearch(event.target.value)} placeholder="ابحث في دروس الصف..." aria-label="بحث المعلم في الدروس" />
+                  </div>
+                  <div className="curriculum-filters" role="group" aria-label="تصفية دروس المعلم حسب المادة">
+                    {["الكل", ...CURRICULUM_SUBJECTS].map((subject) => <button key={subject} type="button" aria-pressed={teacherLessonSubjectFilter === subject} onClick={() => setTeacherLessonSubjectFilter(subject)}>{subject}</button>)}
+                  </div>
+                  <div className="space-y-2">
+                    {visibleTeacherLessons.map((lesson) => <button key={lesson.id} type="button" onClick={() => { setActiveLessonId(lesson.id); setTeacherCurriculumGrade(lesson.grade || teacherCurriculumGrade); }} className="w-full p-2.5 rounded-xl bg-[var(--surface2)] border border-[var(--line)] text-start">
+                      <span className="block text-xs font-black">{lesson.title}</span><span className="block text-[11px] text-[var(--muted)]">{lesson.subject} • {lesson.grade}</span>
+                    </button>)}
+                    {visibleTeacherLessons.length === 0 && <p className="text-xs font-bold text-[var(--muted)]">لا توجد دروس لهذا الصف حتى الآن.</p>}
+                  </div>
+                  <div className="border-t border-[var(--line)] pt-3 space-y-2">
+                    <h3 className="text-sm font-black text-[#E8C84A]">معاينة القارئ والمختبر</h3>
+                    <h4 className="text-sm font-black">{activeLesson.title}</h4>
+                    {(activeLesson.sentences || []).map((sentence, index) => <button key={index} type="button" onClick={() => handleReadSentence(sentence, index)} className="w-full text-start p-2 rounded-xl bg-[var(--surface2)] text-xs font-bold">{sentence.text}</button>)}
+                    <Interactive3DLab modelType={activeLesson.modelType || "cell"} autoRotate={autoRotate3D} />
+                  </div>
+                  <div className="border-t border-[var(--line)] pt-3 space-y-2">
+                    <h3 className="text-sm font-black">إضافة درس جديد</h3>
+                    <input className="input text-sm" maxLength={120} placeholder="عنوان الدرس" value={newLessonTitle} onChange={(event) => setNewLessonTitle(event.target.value)} />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <select className="input text-sm" value={newLessonGrade} onChange={(event) => setNewLessonGrade(event.target.value)}>{CURRICULUM_GRADES.map((grade) => <option key={grade} value={grade}>{grade}</option>)}</select>
+                      <select className="input text-sm" value={newLessonSubject} onChange={(event) => setNewLessonSubject(event.target.value)}>{CURRICULUM_SUBJECTS.map((subject) => <option key={subject} value={subject}>{subject}</option>)}</select>
+                    </div>
+                    <select className="input text-sm" value={newLessonModel} onChange={(event) => setNewLessonModel(event.target.value)} aria-label="نوع نموذج المختبر">
+                      <option value="cell">نموذج الخلية</option><option value="solar">المجموعة الشمسية</option><option value="geometry">الأشكال الهندسية</option>
+                    </select>
+                    <textarea className="input text-sm" rows="4" maxLength={4000} placeholder="اكتب محتوى الدرس. افصل كل جملة أو فقرة بسطر جديد." value={newLessonContent} onChange={(event) => setNewLessonContent(event.target.value)} />
+                    <button type="button" className="btn btn-olive w-full text-sm" onClick={() => {
+                      const title = newLessonTitle.trim().slice(0, 120);
+                      const lines = newLessonContent.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).slice(0, 30);
+                      if (!title || lines.length === 0) { notify("أدخل عنوان الدرس ومحتواه أولاً"); return; }
+                      const lesson = { id: `YL-${Date.now()}`, grade: newLessonGrade, subject: newLessonSubject, title, xp: 10, modelType: newLessonModel, source: "أضافه المعلم — يحتاج مراجعة المنهج", completedBy: [], sentences: lines.map((text) => ({ text, hint: "راجع الفكرة مع الكتاب المدرسي." })) };
+                      setData((prev) => ({ ...prev, lessons: [lesson, ...prev.lessons] }));
+                      setTeacherCurriculumGrade(newLessonGrade); setActiveLessonId(lesson.id); setNewLessonTitle(""); setNewLessonContent("");
+                      notify("تمت إضافة الدرس إلى بيانات هذا المتصفح فقط");
+                    }}>إضافة الدرس إلى المنهج التجريبي</button>
+                    <p className="source-note">الدروس التي تضيفها تحفظ في هذا المتصفح فقط. نشرها ومشاركتها بين حسابات المدرسة يحتاج قاعدة بيانات وخادماً.</p>
+                  </div>
+                </div>
+                <div className="card p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-base font-black text-[#E8C84A]">رصد وتعديل الدرجات (40 + 60)</h2>
+                    <select
+                      className="input !w-auto !py-2 text-xs font-bold"
+                      value={activeStudentId}
+                      onChange={(e) => setActiveStudentId(e.target.value)}
+                    >
+                      {data.students.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {currentStudent.marks.map((m, idx) => (
+                      <div key={idx} className="p-3 rounded-2xl bg-[var(--surface2)] border border-[var(--line)] space-y-2">
+                        <div className="flex items-center justify-between text-xs font-black">
+                          <span>{m.subject}</span>
+                          <span className="text-[#E8C84A]">المجموع: {Number(m.termWork) + Number(m.finalExam)} / 100</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[11px] font-bold text-[var(--muted)]">أعمال السنة (من 40)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="40"
+                              step="1"
+                              className="input !py-2 text-sm font-black"
+                              value={m.termWork}
+                              onChange={(e) => {
+                                const val = Math.min(40, Math.max(0, Math.trunc(Number(e.target.value) || 0)));
+                                setData((prev) => ({
+                                  ...prev,
+                                  students: prev.students.map((st) =>
+                                    st.id === currentStudent.id
+                                      ? {
+                                          ...st,
+                                          marks: st.marks.map((mk, i) => (i === idx ? { ...mk, termWork: val } : mk))
+                                        }
+                                      : st
+                                  )
+                                }));
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] font-bold text-[var(--muted)]">الاختبار النهائي (من 60)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="60"
+                              step="1"
+                              className="input !py-2 text-sm font-black"
+                              value={m.finalExam}
+                              onChange={(e) => {
+                                const val = Math.min(60, Math.max(0, Math.trunc(Number(e.target.value) || 0)));
+                                setData((prev) => ({
+                                  ...prev,
+                                  students: prev.students.map((st) =>
+                                    st.id === currentStudent.id
+                                      ? {
+                                          ...st,
+                                          marks: st.marks.map((mk, i) => (i === idx ? { ...mk, finalExam: val } : mk))
+                                        }
+                                      : st
+                                  )
+                                }));
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* إضافة واجب تفاعلي جديد */}
+                <div className="card p-4 space-y-3">
+                  <h3 className="text-sm font-black text-[#E8C84A]">نشر واجب تفاعلي جديد للطلاب</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <select className="input text-sm" value={newAssignmentGrade} onChange={(event) => setNewAssignmentGrade(event.target.value)}>{CURRICULUM_GRADES.map((grade) => <option key={grade} value={grade}>{grade}</option>)}</select>
+                    <select className="input text-sm" value={newAssignmentSubject} onChange={(event) => setNewAssignmentSubject(event.target.value)}>{CURRICULUM_SUBJECTS.map((subject) => <option key={subject} value={subject}>{subject}</option>)}</select>
+                  </div>
+                  <input
+                    type="text"
+                    className="input text-sm"
+                    placeholder="عنوان الواجب..."
+                    value={newAssignTitle}
+                    onChange={(e) => setNewAssignTitle(e.target.value)}
+                  />
+                  <input
+                    type="text"
+                    maxLength={160}
+                    className="input text-sm"
+                    placeholder="نص السؤال..."
+                    value={newAssignQuestion}
+                    onChange={(e) => setNewAssignQuestion(e.target.value)}
+                  />
+                  <div className="space-y-2 rounded-xl bg-[var(--surface2)] p-3">
+                    <p className="text-xs font-black">خيارات الإجابة — حدد الإجابة الصحيحة</p>
+                    {newAssignOptions.map((option, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <input
+                          type="radio"
+                          name="new-assignment-correct"
+                          aria-label={`تحديد الخيار ${index + 1} كإجابة صحيحة`}
+                          checked={newAssignCorrectIndex === index}
+                          onChange={() => setNewAssignCorrectIndex(index)}
+                        />
+                        <input
+                          type="text"
+                          maxLength={160}
+                          className="input text-sm !py-2"
+                          placeholder={`الخيار ${index + 1}`}
+                          value={option}
+                          onChange={(e) => setNewAssignOptions((prev) => prev.map((value, i) => i === index ? e.target.value : value))}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const title = newAssignTitle.trim().slice(0, 120);
+                      const question = newAssignQuestion.trim().slice(0, 500);
+                      const options = newAssignOptions.map((option) => option.trim().slice(0, 160));
+                      if (!title || !question || options.some((option) => !option)) {
+                        notify("أكمل عنوان الواجب والسؤال والخيارات الثلاثة أولاً");
+                        return;
+                      }
+                      setData((prev) => ({
+                        ...prev,
+                        assignments: [
+                          {
+                            id: "A" + Date.now(),
+                            subject: newAssignmentSubject,
+                            grade: newAssignmentGrade,
+                            title,
+                            question,
+                            options,
+                            correctIndex: newAssignCorrectIndex,
+                            xp: 20,
+                            submissions: {}
+                          },
+                          ...prev.assignments
+                        ]
+                      }));
+                      setNewAssignTitle("");
+                      setNewAssignQuestion("");
+                      setNewAssignOptions(["", "", ""]);
+                      setNewAssignCorrectIndex(0);
+                      notify("تم نشر الواجب التجريبي لجميع الطلاب");
+                    }}
+                    className="btn btn-olive w-full text-sm"
+                  >
+                    نشر الواجب فوراً
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ==================== بوابة المشرف العام والإدارة ==================== */}
+            {role === "admin" && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-2.5">
+                  <div className="card p-3 text-center">
+                    <div className="text-xl font-black text-[#E8C84A]">{data.students.length}</div>
+                    <div className="text-xs font-bold text-[var(--muted)]">الطلاب</div>
+                  </div>
+                  <div className="card p-3 text-center">
+                    <div className="text-xl font-black text-[#7A8A44]">{data.lessons.length}</div>
+                    <div className="text-xs font-bold text-[var(--muted)]">الدروس 3D</div>
+                  </div>
+                  <div className="card p-3 text-center">
+                    <div className="text-xl font-black text-[#E8C84A]">{data.parentMessages.length}</div>
+                    <div className="text-xs font-bold text-[var(--muted)]">رسائل الأولياء</div>
+                  </div>
+                </div>
+
+                {/* إضافة طالب جديد */}
+                <div className="card p-4 space-y-3">
+                  <h3 className="text-sm font-black text-[#E8C84A]">تسجيل طالب جديد في المنظومة</h3>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      maxLength={100}
+                      className="input text-sm"
+                      placeholder="اسم الطالب الرباعي..."
+                      value={newStudentName}
+                      onChange={(e) => setNewStudentName(e.target.value)}
+                    />
+                    <select className="input text-sm" value={newStudentGrade} onChange={(event) => setNewStudentGrade(event.target.value)} aria-label="الصف الدراسي للطالب الجديد">
+                      {CURRICULUM_GRADES.map((grade) => <option key={grade} value={grade}>{grade}</option>)}
+                    </select>
+                    <input
+                      type="tel"
+                      inputMode="tel"
+                      maxLength={16}
+                      className="input text-sm"
+                      placeholder="رقم هاتف ولي الأمر (اختياري للنسخة التجريبية)"
+                      value={newStudentParentPhone}
+                      onChange={(e) => setNewStudentParentPhone(e.target.value.replace(/[^0-9+]/g, "").slice(0, 16))}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!newStudentName.trim()) return;
+                        const usedNumbers = data.students
+                          .map((student) => Number(String(student.id || "").replace(/^ST-/i, "")))
+                          .filter((number) => Number.isInteger(number) && number > 0);
+                        const nextNum = Math.max(100, ...usedNumbers) + 1;
+                        const newPin = createDemoPin();
+                        const newSt = {
+                          id: `ST-${nextNum}`,
+                          pin: newPin,
+                          parentPhone: newStudentParentPhone.trim(),
+                          name: newStudentName.trim().slice(0, 100),
+                          grade: newStudentGrade,
+                          points: 0,
+                          attendance: 0,
+                          teacherNote: "طالب جديد مسجل في مدرسة النور.",
+                          marks: createMarksForGrade(newStudentGrade)
+                        };
+                        setData((prev) => ({ ...prev, students: [...prev.students, newSt] }));
+                        setNewStudentName("");
+                        setNewStudentParentPhone("");
+                        setNewStudentGrade(CURRICULUM_GRADES[5]);
+                        notify(`تم إنشاء ${newSt.id} والرمز التجريبي ${newPin}`);
+                      }}
+                      className="btn btn-gold text-xs shrink-0"
+                    >
+                      إضافة
+                    </button>
+                  </div>
+                </div>
+
+                <div className="card p-4 space-y-3">
+                  <h3 className="text-sm font-black text-[#E8C84A]">توزيع الطلاب على الصفوف (تجريبي)</h3>
+                  {data.students.map((student) => <div key={student.id} className="flex items-center justify-between gap-2 p-2 rounded-xl bg-[var(--surface2)]">
+                    <span className="text-xs font-bold min-w-0 truncate">{student.name}</span>
+                    <select className="input !w-auto !py-1.5 text-xs" value={student.grade || CURRICULUM_GRADES[5]} onChange={(event) => {
+                      const grade = event.target.value;
+                      setData((prev) => ({ ...prev, students: prev.students.map((item) => item.id === student.id ? { ...item, grade, marks: createMarksForGrade(grade, Object.fromEntries((item.marks || []).map((mark) => [mark.subject, [mark.termWork, mark.finalExam]]))) } : item) }));
+                    }} aria-label={`تغيير صف ${student.name}`}>
+                      {CURRICULUM_GRADES.map((grade) => <option key={grade} value={grade}>{grade}</option>)}
+                    </select>
+                  </div>)}
+                </div>
+
+                {/* نشر إعلان مدرسي */}
+                <div className="card p-4 space-y-3">
+                  <h3 className="text-sm font-black text-[#E8C84A]">نشر إعلان في قسم «مدرستي»</h3>
+                  <input
+                    type="text"
+                    className="input text-sm"
+                    placeholder="عنوان الإعلان..."
+                    value={newAnnTitle}
+                    onChange={(e) => setNewAnnTitle(e.target.value)}
+                  />
+                  <textarea
+                    rows="2"
+                    className="input text-sm"
+                    placeholder="تفاصيل الإعلان..."
+                    value={newAnnBody}
+                    onChange={(e) => setNewAnnBody(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!newAnnTitle.trim() || !newAnnBody.trim()) return;
+                      setData((prev) => ({
+                        ...prev,
+                        announcements: [
+                          { id: "AN" + Date.now(), title: newAnnTitle.trim(), date: "اليوم", body: newAnnBody.trim() },
+                          ...prev.announcements
+                        ]
+                      }));
+                      setNewAnnTitle("");
+                      setNewAnnBody("");
+                      notify("تم نشر الإعلان المدرسي بنجاح");
+                    }}
+                    className="btn btn-olive w-full text-sm"
+                  >
+                    نشر الإعلان
+                  </button>
+                </div>
+
+                {/* رسائل أولياء الأمور */}
+                <div className="card p-4 space-y-2">
+                  <h3 className="text-sm font-black text-[#E8C84A]">بريد أولياء الأمور الوارد</h3>
+                  {data.parentMessages.map((msg) => (
+                    <div key={msg.id} className="p-3 rounded-xl bg-[var(--surface2)] text-xs space-y-1">
+                      <div className="flex justify-between font-black text-[#E8C84A]">
+                        <span>{msg.from}</span>
+                        <span>{msg.time}</span>
+                      </div>
+                      <p className="font-bold">{msg.text}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(role === "teacher" || role === "admin") && (
+              <section className="card p-4 space-y-3" aria-label="إدارة جدول الحصص الأسبوعي">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <h2 className="text-base font-black text-[#E8C84A]">إدارة جدول الحصص الأسبوعي</h2>
+                  <span className="text-[10px] font-bold text-[var(--muted)]">السبت إلى الخميس</span>
+                </div>
+                <label className="block text-xs font-black">الصف الدراسي
+                  <select className="input mt-1 text-sm" value={teacherCurriculumGrade} onChange={(event) => setTeacherCurriculumGrade(event.target.value)}>
+                    {CURRICULUM_GRADES.map((grade) => <option key={grade} value={grade}>{grade}</option>)}
+                  </select>
+                </label>
+                {(data.scheduleByGrade?.[teacherCurriculumGrade] || []).map((row, idx) => (
+                  <label key={row.day} className="block text-xs font-black">{row.day}
+                    <textarea rows="2" maxLength="400" className="input mt-1 text-xs" value={row.classes || ""} placeholder="اكتب حصص اليوم بالترتيب" onChange={(event) => setData((prev) => {
+                      const gradeRows = [...(prev.scheduleByGrade?.[teacherCurriculumGrade] || [])];
+                      gradeRows[idx] = { ...gradeRows[idx], classes: event.target.value };
+                      return { ...prev, scheduleByGrade: { ...(prev.scheduleByGrade || {}), [teacherCurriculumGrade]: gradeRows } };
+                    })} />
+                  </label>
+                ))}
+                <p className="source-note">تظهر تعديلات الجدول فوراً للطالب وولي الأمر في هذا المتصفح. مشاركة الجدول بين الأجهزة تحتاج قاعدة بيانات مدرسية مشتركة.</p>
+              </section>
+            )}
+
+            {role === "teacher" && (
+              <section className="card p-4 space-y-3" aria-label="سجل الحضور والغياب اليومي">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <h2 className="text-base font-black text-[#E8C84A]">سجل الحضور والغياب اليومي</h2>
+                  <input aria-label="تاريخ تسجيل الحضور" type="date" className="input !w-auto !py-2 text-xs" value={attendanceDate} onChange={(event) => setAttendanceDate(event.target.value)} />
+                </div>
+                <div className="flex items-center justify-between gap-2 text-xs font-bold text-[var(--muted)]">
+                  <span>{teacherCurriculumGrade}</span><span>{attendanceStudents.length} طالباً</span>
+                </div>
+                <button type="button" className="btn btn-olive w-full text-xs" onClick={markAllPresent}>تحضير جميع طلاب الصف كحاضرين</button>
+                <div className="space-y-2">
+                  {attendanceStudents.map((student) => (
+                    <div key={student.id} className="attendance-row">
+                      <div className="min-w-0"><div className="text-xs font-black truncate">{student.name}</div><div className="text-[10px] text-[var(--muted)]" dir="ltr">{student.id} · {student.attendance}% حضور</div></div>
+                      <select className="input" aria-label={`حالة حضور ${student.name}`} value={getAttendanceStatus(student.id)} onChange={(event) => setAttendanceStatus(student.id, event.target.value)}>
+                        <option value="">لم يسجل</option><option value="present">حاضر</option><option value="absent">غائب</option><option value="late">متأخر</option>
+                      </select>
+                    </div>
+                  ))}
+                  {attendanceStudents.length === 0 && <p className="text-xs font-bold text-[var(--muted)]">لا يوجد طلاب مسجلون في الصف المختار.</p>}
+                </div>
+                <p className="source-note">تُحسب نسبة الحضور من سجلات الأيام المحفوظة على هذا الجهاز. المتأخر يُحتسب حاضراً، والغائب لا يُحتسب. ستظهر النسبة في بوابة الطالب وولي الأمر عند استخدام المتصفح نفسه.</p>
+              </section>
+            )}
+
+            {role === "teacher" && (
+              <section className="card p-4 space-y-3" aria-label="بنك اختبارات الدروس">
+                <h2 className="text-base font-black text-[#E8C84A]">بنك أسئلة الدروس</h2>
+                <p className="text-xs font-bold text-[var(--muted)]">الدرس المحدد حالياً: {activeLesson.title}</p>
+                <textarea rows="2" maxLength="240" className="input text-sm" placeholder="اكتب سؤالاً قصيراً مرتبطاً بالدرس" value={newQuizQuestion} onChange={(event) => setNewQuizQuestion(event.target.value)} />
+                <div className="space-y-2 rounded-xl bg-[var(--surface2)] p-3">
+                  {newQuizOptions.map((option, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <input type="radio" name="lesson-quiz-correct" checked={newQuizCorrectIndex === index} onChange={() => setNewQuizCorrectIndex(index)} aria-label={`الإجابة الصحيحة هي الخيار ${index + 1}`} />
+                      <input className="input text-xs !py-2" maxLength="180" placeholder={`خيار الإجابة ${index + 1}`} value={option} onChange={(event) => setNewQuizOptions((prev) => prev.map((value, i) => i === index ? event.target.value : value))} />
+                    </div>
+                  ))}
+                </div>
+                <button type="button" className="btn btn-olive w-full text-xs" onClick={addQuestionToActiveLesson}>إضافة السؤال إلى بنك هذا الدرس</button>
+                <p className="source-note">يظهر السؤال المضاف في اختبار الدرس لدى الطالب في هذا المتصفح. الأسئلة الأولية المولدة آلياً تحتاج مراجعة المعلم قبل اعتمادها تعليمياً.</p>
+              </section>
+            )}
+
+          </main>
+          <div role="note" className={`demo-disclaimer-bar ${role === "student" ? "student-mode" : ""}`}>نسخة تجريبية محلية. التغييرات محفوظة على هذا الجهاز فقط ولا تنتقل إلى أجهزة أخرى دون خادم مدرسي.</div>
+
+          {/* زر المساعد الذكي العائم (يظهر فقط بعد تسجيل الدخول ومخصص لكل دور) */}
+          <button
+            type="button"
+            onClick={() => setAiOpen((o) => !o)}
+            className="alnoor-ai-fab px-3.5 py-2.5 rounded-full bg-gradient-to-l from-[#E8C84A] to-[#C9A227] text-[#2A2118] border-2 border-[#FFF9EC] shadow-2xl flex items-center gap-1.5 font-black text-xs hover:scale-105 transition-transform"
+          >
+            <SmartGlyph name="ai" size={18} color="#2A2118" />
+            <span>مساعد نور</span>
+          </button>
+
+          {/* نافذة المساعد الذكي المخصصة لكل دور */}
+          {aiOpen && (
+            <div className="alnoor-ai-panel max-w-[520px] mx-auto card p-4 border-2 border-[#E8C84A] shadow-2xl space-y-3">
+              <div className="flex items-center justify-between border-b border-[var(--line)] pb-2">
+                <div className="flex items-center gap-2">
+                  <SmartEmojiBadge icon="ai" active size={34} />
+                  <div>
+                    <div className="text-xs font-black text-[#E8C84A]">مساعد نور التعليمي ({roleTitleMap[role]})</div>
+                    <div className="text-[10px] font-bold text-[var(--muted)]">يشرح الدروس ويولد تدريبات بحسب الصف المفتوح</div>
+                  </div>
+                </div>
+                <button type="button" onClick={() => setAiOpen(false)} className="text-xs font-black px-2.5 py-1 rounded-lg bg-[var(--surface2)]">
+                  إغلاق
+                </button>
+              </div>
+
+              <details className="rounded-xl border border-[var(--line)] bg-[var(--surface2)] p-3">
+                <summary className="cursor-pointer text-xs font-black">إعدادات محرك المساعد الذكي</summary>
+                <div className="ai-settings-grid mt-3">
+                  <label>المحرك المستخدم
+                    <select className="input text-sm" value={aiSettings.provider} onChange={(event) => setAiSettings((prev) => ({ ...prev, provider: event.target.value }))}>
+                      <option value="local">محلي — دون إنترنت</option><option value="gemini">Google Gemini API</option><option value="groq">Groq API</option><option value="pollinations">Pollinations Pay — ربط الحساب</option>
+                    </select>
+                  </label>
+                  <label>مفتاح Gemini
+                    <input className="input text-sm" type="password" autoComplete="off" value={aiSettings.geminiKey} onChange={(event) => setAiSettings((prev) => ({ ...prev, geminiKey: event.target.value.trim() }))} placeholder="AIza..." />
+                  </label>
+                  <label>نموذج Gemini
+                    <input className="input text-sm" value={aiSettings.geminiModel} onChange={(event) => setAiSettings((prev) => ({ ...prev, geminiModel: event.target.value.trim() }))} placeholder="gemini-3.8-flash" />
+                  </label>
+                  <label>مفتاح Groq
+                    <input className="input text-sm" type="password" autoComplete="off" value={aiSettings.groqKey} onChange={(event) => setAiSettings((prev) => ({ ...prev, groqKey: event.target.value.trim() }))} placeholder="gsk_..." />
+                  </label>
+                  <label>معرّف نموذج Groq
+                    <input className="input text-sm" value={aiSettings.groqModel} onChange={(event) => setAiSettings((prev) => ({ ...prev, groqModel: event.target.value.trim() }))} placeholder="اختر نموذجاً متاحاً في حسابك" />
+                  </label>
+                  <label>معرّف تطبيق Pollinations العام (اختياري)
+                    <input className="input text-sm" type="text" autoComplete="off" value={aiSettings.pollinationsAppKey} onChange={(event) => setAiSettings((prev) => ({ ...prev, pollinationsAppKey: event.target.value.trim() }))} placeholder="pk_... (اختياري)" />
+                  </label>
+                  <label>معرّف نموذج Pollinations
+                    <input className="input text-sm" value={aiSettings.pollinationsModel} onChange={(event) => setAiSettings((prev) => ({ ...prev, pollinationsModel: event.target.value.trim() }))} placeholder="openai/gpt-5.4-nano" />
+                  </label>
+                  <div className="pwa-actions">
+                    <button type="button" className="btn btn-olive text-xs" onClick={handleConnectPollinations}>ربط حساب Pollinations بموافقتك</button>
+                    {pollinationsToken && <button type="button" className="btn btn-ghost text-xs" onClick={handleDisconnectPollinations}>فصل الحساب</button>}
+                  </div>
+                  {pollinationsStatus && <p className="source-note" role="status">{pollinationsStatus}</p>}
+                  <div className="source-note">لا يوجد توليد Pollinations مجهول بلا مصادقة. زر الربط يستخدم OAuth مع PKCE ويملأ مبدئياً سقف إنفاق قدره 1 دولار ومدة صلاحية 7 أيام؛ يمكنك تعديل السقف أو إزالته أو رفض التفويض في شاشة Pollinations. التفويض خاص بهذا التبويب ولا يحفظ الرمز في localStorage. قد يتطلب رصيداً أو استخداماً مدفوعاً، لذلك لا نعده خدمة مجانية بلا حدود. معرّف pk_ اختياري وهو معرّف تطبيق عام لا مفتاح توليد.</div>
+                  <div className="source-note">المحرك المحلي قواعد تعليمية وإجابات مبنية على محتوى المنصة، وليس نموذج لغوي كبيراً. عند فشل الاتصال الخارجي يرجع إليه تلقائياً.</div>
+                  <button type="button" className="btn btn-ghost text-xs" onClick={() => { handleDisconnectPollinations(); setAiSettings({ provider: "local", geminiKey: "", geminiModel: "gemini-3.8-flash", groqKey: "", groqModel: "", pollinationsAppKey: "", pollinationsModel: "openai/gpt-5.4-nano" }); }}>مسح المفاتيح والإعدادات وفصل Pollinations</button>
+                </div>
+              </details>
+
+              <div className="max-h-44 overflow-y-auto space-y-2 text-xs">
+                {(aiHistoryByRole[role] || []).map((m, idx) => (
+                  <div
+                    key={idx}
+                    className={`p-2.5 rounded-2xl leading-5 font-bold ${
+                      m.sender === "ai"
+                        ? "bg-[var(--surface2)] text-[var(--ink)]"
+                        : "bg-[#5A6B2F] text-white mr-6"
+                    }`}
+                  >
+                    {m.text}
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap gap-1.5">
+                {(roleAiPrompts[role] || []).map((p, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => sendAiMessage(p)}
+                    className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[var(--surface2)] border border-[var(--gold)]"
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  maxLength={500}
+                  className="input !py-2 text-xs"
+                  placeholder="اكتب سؤالك للمساعد الذكي..."
+                  value={aiInput}
+                  onChange={(e) => setAiInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && sendAiMessage()}
+                />
+                <button type="button" disabled={aiBusy} onClick={() => sendAiMessage()} className="btn btn-gold !py-2 !px-4 !min-h-[40px] text-xs disabled:opacity-60">
+                  {aiBusy ? "يفكر..." : "إرسال"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* شريط التنقل السفلي لبوابة الطالب (6 تبويبات متساوية الارتفاع بدون تداخل) */}
+          {role === "student" && (
+            <nav aria-label="التنقل الرئيسي للطالب" className="student-bottom-nav bg-[var(--surface)]/95 backdrop-blur border-t border-[var(--gold)]">
+              <div className="student-bottom-nav-inner">
+                {studentTabsList.map((tab) => {
+                  const isActive = studentTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setStudentTab(tab.id)}
+                      aria-current={isActive ? "page" : undefined}
+                      className={`flex flex-col items-center justify-center py-1 rounded-xl transition-all ${
+                        isActive ? "bg-[#5A6B2F]/30" : "opacity-80"
+                      }`}
+                    >
+                      <SmartEmojiBadge icon={tab.icon} active={isActive} size={34} />
+                      <span className={`text-[10px] font-black mt-1 ${isActive ? "text-[#E8C84A]" : "text-[var(--muted)]"}`}>
+                        {tab.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </nav>
+          )}
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
