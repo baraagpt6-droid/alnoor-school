@@ -1,7 +1,20 @@
 plugins { id 'com.android.application' }
+
+def signingStorePath = System.getenv("ANDROID_KEYSTORE_PATH")
+def signingStorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+def signingKeyAlias = System.getenv("ANDROID_KEY_ALIAS")
+def signingKeyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+def hasReleaseSigning = [signingStorePath, signingStorePassword, signingKeyAlias, signingKeyPassword]
+        .every { value -> value != null && !value.trim().isEmpty() }
+
+if (!hasReleaseSigning) {
+    throw new GradleException("Release signing is not configured. Set the ANDROID_KEYSTORE_* environment variables via GitHub Actions Secrets.")
+}
+
 android {
     namespace 'com.alnoor.school'
     compileSdk 35
+
     defaultConfig {
         applicationId 'com.alnoor.school'
         minSdk 23
@@ -9,12 +22,25 @@ android {
         versionCode 120
         versionName '1.2.0'
     }
+
+    signingConfigs {
+        release {
+            storeFile file(signingStorePath)
+            storePassword signingStorePassword
+            keyAlias signingKeyAlias
+            keyPassword signingKeyPassword
+            storeType 'JKS'
+        }
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+
     buildTypes {
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             shrinkResources false
         }
