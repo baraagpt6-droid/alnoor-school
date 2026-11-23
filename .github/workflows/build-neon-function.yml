@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   bundle:
@@ -40,17 +40,6 @@ jobs:
           (cd bundle && zip -q -X ../alnoor-schoolapi-2.0.2.zip index.mjs)
           unzip -t alnoor-schoolapi-2.0.2.zip
           sha256sum alnoor-schoolapi-2.0.2.zip
-      - name: Stage temporary base64 deployment payload
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p .neon-deploy-staging
-          base64 -w 0 cloud-api/alnoor-schoolapi-2.0.2.zip > .neon-deploy-staging/alnoor-schoolapi-2.0.2.zip.b64
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .neon-deploy-staging/alnoor-schoolapi-2.0.2.zip.b64
-          git commit -m "Temporarily stage Neon 2.0.2 deployment payload"
-          git push origin HEAD:main
       - name: Upload Neon function bundle
         uses: actions/upload-artifact@v4
         with:
