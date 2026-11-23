@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - "alnoor-school-release-1.1.1.zip"
+      - "alnoor-school-release-1.1.2.zip"
       - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
@@ -29,8 +29,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo "3c93f6b6cdcabda0bfbb9d6a47c0c4b2ce90bc58c4c4abaea0214fa702f5cac7  alnoor-school-release-1.1.1.zip" | sha256sum -c -
-          unzip -t alnoor-school-release-1.1.1.zip
+          echo "9feef008917ff29c1c53d846daff11b3448c320e7be09a86635c4db72ae9092d  alnoor-school-release-1.1.2.zip" | sha256sum -c -
+          unzip -t alnoor-school-release-1.1.2.zip
 
       - name: Assemble site
         shell: bash
@@ -38,12 +38,37 @@ jobs:
           set -euo pipefail
           rm -rf site
           mkdir -p site
-          unzip -q alnoor-school-release-1.1.1.zip -d site
+          unzip -q alnoor-school-release-1.1.2.zip -d site
           rm -rf site/.github
           test -s site/index.html
           test -s site/styles.fixed.css
           test -s site/manifest.json
           test -s site/sw.js
+          grep -q 'const APP_VERSION = "1.1.2";' site/index.html
+          grep -q 'alnoor-school-v1.1.2' site/sw.js
+
+      - name: Stamp app and cache version from this commit
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import os, re
+          build_id = os.environ["GITHUB_SHA"][:7]
+          version = f"1.1.2+{build_id}"
+          html = Path("site/index.html")
+          source = html.read_text(encoding="utf-8")
+          source, count = re.subn(r'const APP_VERSION = "[^"]+";', f'const APP_VERSION = "{version}";', source, count=1)
+          if count != 1:
+              raise SystemExit("APP_VERSION marker not found")
+          html.write_text(source, encoding="utf-8")
+          worker = Path("site/sw.js")
+          source = worker.read_text(encoding="utf-8")
+          source, count = re.subn(r'const CACHE_VERSION = "[^"]+";', f'const CACHE_VERSION = "alnoor-school-v{version}";', source, count=1)
+          if count != 1:
+              raise SystemExit("CACHE_VERSION marker not found")
+          worker.write_text(source, encoding="utf-8")
+          print(f"Publishing version {version}")
+          PY
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
