@@ -265,6 +265,72 @@
       .alnoor-ai-fab { left:12px !important; padding:9px 13px !important; }
       .alnoor-ai-panel { padding-inline:12px !important; }
     }
+
+    /* Alnoor School 1.3.0 — role portal layout */
+    .other-portal-root { padding-bottom:calc(112px + env(safe-area-inset-bottom)) !important; }
+    .teacher-portal-root,.parent-portal-root,.admin-portal-root { min-width:0; }
+    .portal-tabs {
+      display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:5px;
+      padding:5px; border:1px solid var(--line); border-radius:17px;
+      background:var(--surface2); box-shadow:0 5px 16px rgba(40,30,15,.07);
+    }
+    .portal-tabs button {
+      min-width:0; min-height:44px; padding:8px 4px; border-radius:12px;
+      border:1px solid transparent; background:transparent; color:var(--muted);
+      font-size:clamp(9px,2.7vw,11px); line-height:1.35; font-weight:900;
+      overflow-wrap:anywhere; transition:background .16s ease,border-color .16s ease,color .16s ease;
+    }
+    .portal-tabs button[aria-selected="true"] {
+      border-color:rgba(201,162,39,.5); background:var(--surface);
+      color:var(--ink); box-shadow:0 3px 10px rgba(60,45,18,.10);
+    }
+    html.dark .portal-tabs button[aria-selected="true"] {
+      background:#3A3021; color:#E5B84B; border-color:rgba(229,184,75,.58);
+    }
+    .attendance-summary {
+      display:grid; grid-template-columns:1fr auto; align-items:center; gap:4px 10px;
+      padding:11px 13px; border:1px solid var(--line); border-radius:13px;
+      background:var(--surface2); color:var(--ink); font-size:12px;
+    }
+    .attendance-summary span { color:#59783A; font-size:18px; font-weight:900; }
+    html.dark .attendance-summary span { color:#E5B84B; }
+    .attendance-summary small { grid-column:1 / -1; color:var(--muted); font-size:10px; font-weight:800; }
+    .attendance-row { grid-template-columns:minmax(0,1fr) minmax(150px,180px) !important; }
+    .attendance-status-buttons { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; }
+    .attendance-status-buttons button {
+      min-width:0; min-height:38px; padding:6px 3px; border:1px solid var(--line);
+      border-radius:10px; background:var(--surface); color:var(--muted);
+      font-size:10px; font-weight:900;
+    }
+    .attendance-status-buttons button[aria-pressed="true"] {
+      border-color:#5C7E3A; background:rgba(90,120,58,.18); color:#547333;
+    }
+    .attendance-status-buttons button[aria-pressed="true"]:nth-child(2) {
+      border-color:#B75D4B; background:rgba(183,93,75,.13); color:#A64A35;
+    }
+    .attendance-status-buttons button[aria-pressed="true"]:nth-child(3) {
+      border-color:#C49A38; background:rgba(196,154,56,.16); color:#9A6F1E;
+    }
+    .schedule-day-field {
+      display:grid !important; grid-template-rows:auto auto; gap:5px;
+      min-width:0; min-height:80px; overflow:visible !important;
+      padding-top:3px; line-height:1.65; white-space:normal;
+    }
+    .schedule-day-field textarea {
+      width:100%; min-width:0; min-height:68px; line-height:1.65;
+      white-space:pre-wrap; overflow-wrap:anywhere; resize:vertical;
+    }
+    @media (max-width:420px) {
+      .portal-tabs { gap:3px; padding:4px; }
+      .portal-tabs button { min-height:48px; padding:7px 2px; font-size:9px; }
+      .attendance-row { grid-template-columns:minmax(0,1fr) !important; }
+      .attendance-status-buttons button { min-height:40px; }
+    }
+    @media print {
+      .portal-tabs,.alnoor-ai-fab,.student-bottom-nav,header button,.app-toast { display:none !important; }
+      .other-portal-root,.student-app-root { padding-bottom:0 !important; }
+      body { background:#fff !important; color:#111 !important; }
+    }
 </style>
 </head>
 <body>
@@ -1914,7 +1980,7 @@
       };
 
       return (
-        <div className={`min-h-[100dvh] max-w-[680px] mx-auto pb-28 ${role === "student" ? "student-app-root" : ""}`}>
+        <div className={`min-h-[100dvh] max-w-[680px] mx-auto pb-28 ${role === "student" ? "student-app-root" : "other-portal-root"}`}>
           {/* الشريط العلوي المتناسق بدون أي التفاف أو تكرار */}
           <header className="sticky top-0 z-30 bg-[var(--paper)]/95 backdrop-blur border-b border-[var(--line)] px-4 py-3 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5 min-w-0">
@@ -2935,14 +3001,27 @@
                 <div className="flex items-center justify-between gap-2 text-xs font-bold text-[var(--muted)]">
                   <span>{teacherCurriculumGrade}</span><span>{attendanceStudents.length} طالباً</span>
                 </div>
-                <button type="button" className="btn btn-olive w-full text-xs" onClick={markAllPresent}>تحضير جميع طلاب الصف كحاضرين</button>
+                <div className="attendance-summary">
+                  <strong>نسبة إكمال التحضير</strong>
+                  <span>{attendanceStudents.length ? Math.round(attendanceStudents.filter((student) => Boolean(getAttendanceStatus(student.id))).length / attendanceStudents.length * 100) : 0}%</span>
+                  <small>{attendanceStudents.filter((student) => Boolean(getAttendanceStatus(student.id))).length} من {attendanceStudents.length} طالباً</small>
+                </div>
+                <button type="button" className="btn btn-olive w-full text-xs" onClick={markAllPresent}>تحضير الكل حاضر</button>
                 <div className="space-y-2">
                   {attendanceStudents.map((student) => (
                     <div key={student.id} className="attendance-row">
                       <div className="min-w-0"><div className="text-xs font-black truncate">{student.name}</div><div className="text-[10px] text-[var(--muted)]" dir="ltr">{student.id} · {student.attendance}% حضور</div></div>
-                      <select className="input" aria-label={`حالة حضور ${student.name}`} value={getAttendanceStatus(student.id)} onChange={(event) => setAttendanceStatus(student.id, event.target.value)}>
-                        <option value="">لم يسجل</option><option value="present">حاضر</option><option value="absent">غائب</option><option value="late">متأخر</option>
-                      </select>
+                      <div className="attendance-status-buttons" role="group" aria-label={`حالة حضور ${student.name}`}>
+                        {[
+                          { value: "present", label: "حاضر" },
+                          { value: "absent", label: "غائب" },
+                          { value: "late", label: "متأخر" }
+                        ].map((option) => (
+                          <button key={option.value} type="button" aria-pressed={getAttendanceStatus(student.id) === option.value} onClick={() => setAttendanceStatus(student.id, option.value)}>
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   ))}
                   {attendanceStudents.length === 0 && <p className="text-xs font-bold text-[var(--muted)]">لا يوجد طلاب مسجلون في الصف المختار.</p>}
