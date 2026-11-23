@@ -99,6 +99,50 @@ const emptySnapshot = () => ({
   parentMessages: [], scheduleByGrade: {}, attendanceRecords: []
 });
 
+async function bootstrapInitialAdmin(body) {
+  const supplied = String(body.token || "");
+  const expected = String(process.env.SCHOOL_BOOTSTRAP_TOKEN || "");
+  if (!expected || supplied.length !== expected.length ||
+      !timingSafeEqual(Buffer.from(supplied), Buffer.from(expected))) {
+    throw httpError("رمز تهيئة المدير غير صحيح.", 403);
+  }
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SELECT pg_advisory_xact_lock(hashtext('alnoor-school-initial-admin-bootstrap'))");
+    const completed = await client.query("SELECT value FROM public.school_settings WHERE key='initial_admin_bootstrap_completed'");
+    if (completed.rowCount) throw httpError("تم تهيئة حساب المدير الأول مسبقاً. افتح التطبيق وسجّل الدخول.", 409);
+    const admin = await client.query(
+      "SELECT id,login_id,role,display_name FROM public.school_accounts WHERE role='admin' AND login_id='ADM-0001' AND is_active=true FOR UPDATE"
+    );
+    if (!admin.rowCount) throw httpError("لم يتم العثور على حساب المدير الأول.", 404);
+    const password = randomBytes(18).toString("base64url");
+    await client.query(
+      "UPDATE public.school_accounts SET password_salt='bcrypt',password_hash=crypt($2,gen_salt('bf',12)),must_change_password=true,updated_at=now() WHERE id=$1",
+      [admin.rows[0].id, password]
+    );
+    await client.query(
+      "INSERT INTO public.school_settings(key,value) VALUES('initial_admin_bootstrap_completed',to_jsonb(now()::text))"
+    );
+    await client.query(
+      "INSERT INTO public.audit_log(actor_id,actor_role,action,entity,entity_id,metadata) VALUES($1,'admin','bootstrap_initial_admin','school_accounts',$1::text,'{}'::jsonb)",
+      [admin.rows[0].id]
+    );
+    await client.query("COMMIT");
+    return {
+      ok: true,
+      login_id: admin.rows[0].login_id,
+      display_name: admin.rows[0].display_name,
+      role: "admin",
+      temporary_password: password,
+      must_change_password: true
+    };
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw error;
+  } finally { client.release(); }
+}
+
 async function login(request, body) {
   const loginId = idText(body.login_id).toUpperCase();
   const role = String(body.role || "");
@@ -551,7 +595,7 @@ async function syncStudentProgress(account, body) {
       const found = await client.query("SELECT id,payload FROM public.lessons WHERE id=$1 AND (grade IS NULL OR grade=$2) FOR UPDATE", [lessonId, student.grade]);
       if (!found.rowCount) continue;
       const payload = found.rows[0].payload || {};
-      const quiz = asArray(payload.questions).find((q) => String(q.id) === quizId);
+      const quiz = asArray(payload.questions).find((q, index) => String(q.id ?? index) === quizId);
       if (!quiz || Number(quiz.correctIndex) !== answer) continue;
       const key = account.student_id + ":" + lessonId + ":" + quizId;
       if (quizSet.has(key) || asArray(payload.quizCompletedBy).includes(key)) {
@@ -663,6 +707,9 @@ export default {
       if (request.method === "GET" && (path === "/" || path === "/health" || path === "/api/health")) {
         const result = await pool.query("SELECT current_database() AS database, now() AS server_time, 1 AS healthy");
         return send(request, { ok: true, service: "alnoor-school-api", version: "2.0.0", database: result.rows[0] });
+      }
+      if (request.method === "POST" && path === "/api/bootstrap/initial-admin") {
+        return send(request, await bootstrapInitialAdmin(await readBody(request)));
       }
       if (request.method === "POST" && path === "/api/auth/login") {
         return send(request, await login(request, await readBody(request)));
