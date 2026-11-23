@@ -1911,8 +1911,8 @@
                 )}
               </div>
 
-              <div role="note" className="rounded-xl border border-amber-500/60 bg-amber-500/10 p-3 text-xs font-bold leading-6 text-[var(--ink)]">
-                نسخة تجريبية فقط. تسجيل الدخول والصلاحيات والتخزين تعمل داخل المتصفح ويمكن التلاعب بها. لا تُدخل بيانات طلاب حقيقية أو درجات أو أرقام هواتف.
+              <div role="status" aria-live="polite" className="rounded-xl border border-[var(--line)] bg-[var(--surface2)] p-3 text-xs font-bold leading-6 text-[var(--ink)]">
+                سجّل الدخول باستخدام حساب المدرسة السحابي. عند انقطاع الإنترنت تبقى نسخة هذا الجهاز متاحة للمعاينة، وتُرسل التغييرات المسموح بها عند عودة الاتصال.
               </div>
 
               {/* شريط إحصائيات حي */}
@@ -1926,13 +1926,16 @@
                   <div className="text-[11px] font-bold text-[var(--muted)]">دروس 3D تفاعلية</div>
                 </div>
                 <div>
-                  <div className="text-base font-black text-[#E8C84A]">محلي</div>
-                  <div className="text-[11px] font-bold text-[var(--muted)]">حفظ تجريبي محلي</div>
+                  <div className="text-base font-black text-[#E8C84A]">سحابي</div>
+                  <div className="text-[11px] font-bold text-[var(--muted)]">مزامنة وحفظ محلي</div>
                 </div>
               </div>
 
-              <div className="school-notice rounded-xl p-3 text-xs font-bold leading-6" role="note">
-                نسخة عرض عامة وتجريبية. بيانات الدخول والدرجات تحفظ محلياً ويمكن فحصها من المتصفح. لا تستخدم بيانات طلاب حقيقية قبل ربط المنصة بخادم مصادقة وقاعدة بيانات.
+              <div className="flex items-center justify-between gap-2 rounded-xl p-3 bg-[var(--surface2)] text-xs font-bold" role="status">
+                <span>حالة خادم المدرسة</span>
+                <span className={`font-black ${cloudStatus === "online" ? "text-emerald-600" : cloudStatus === "offline" ? "text-amber-600" : "text-[var(--muted)]"}`}>
+                  {cloudStatus === "online" ? "متصل" : cloudStatus === "syncing" ? "يجري الاتصال" : cloudStatus === "pending" ? "مزامنة معلّقة" : cloudStatus === "expired" ? "انتهت الجلسة" : cloudStatus === "offline" ? "دون إنترنت" : "فحص الاتصال"}
+                </span>
               </div>
 
               {/* اختيار نوع البوابة */}
@@ -1980,17 +1983,17 @@
                     className="input font-bold"
                     value={loginId}
                     onChange={(e) => setLoginId(e.target.value)}
-                    placeholder="أدخل المعرّف..."
+                    placeholder="أدخل رقم القيد أو الرمز الوظيفي..."
                     required
                   />
                 </div>
 
                 <div>
                   <label htmlFor="login-secret" className="block text-xs font-extrabold text-[var(--muted)] mb-1">
-                    {loginTab === "student" && "الرمز السري للطالب (PIN)"}
-                    {loginTab === "parent" && "رقم هاتف ولي الأمر المسجل"}
+                    {loginTab === "student" && "كلمة المرور المدرسية"}
+                    {loginTab === "parent" && "كلمة المرور المدرسية لولي الأمر"}
                     {loginTab === "teacher" && "كلمة مرور الكادر التعليمي"}
-                    {loginTab === "admin" && "رمز الصلاحية الإدارية"}
+                    {loginTab === "admin" && "كلمة مرور المشرف العام"}
                   </label>
                   <input
                     id="login-secret"
@@ -2024,7 +2027,7 @@
                   <span>دخول تجريبي سريع بضغطة واحدة</span>
                 </button>
                 <p className="text-center text-[11px] font-bold text-[var(--muted)]">
-                  بيانات العرض معبأة مسبقاً ويمكنك تعديلها قبل تسجيل الدخول.
+                  الحسابات المدرسية تصدرها الإدارة. زر المعاينة لا يتصل بالسحابة ولا يغيّر سجلاتها.
                 </p>
               </form>
             </div>
@@ -2129,6 +2132,10 @@
               onClick={() => {
                 setRole(null);
                 setAiOpen(false);
+                setCloudSession(null);
+                setPreviewMode(false);
+                setMustChangePassword(false);
+                localStorage.removeItem(CLOUD_SESSION_KEY);
               }}
               className="px-3.5 py-2 rounded-xl bg-[#8A4A22] text-[#FFF8E6] text-xs font-black shrink-0 flex items-center gap-1.5 hover:brightness-110"
             >
@@ -2141,6 +2148,19 @@
           {toast && (
             <div role="status" aria-live="polite" className={`app-toast ${role === "student" ? "student-mode" : ""}`}>
               {toast}
+            </div>
+          )}
+
+          {mustChangePassword && cloudSession && !previewMode && (
+            <div className="fixed inset-0 z-[2200] grid place-items-center bg-black/65 p-4">
+              <form className="card w-full max-w-md p-5 space-y-3 shadow-2xl" onSubmit={(event) => { event.preventDefault(); changeSchoolPassword(); }}>
+                <h2 className="text-base font-black text-[#E8C84A]">غيّر كلمة المرور المؤقتة</h2>
+                <p className="text-xs font-bold text-[var(--muted)] leading-6">يلزم تعيين كلمة مرور جديدة قبل الوصول إلى بيانات المدرسة.</p>
+                <input className="input text-sm" type="password" autoComplete="current-password" placeholder="كلمة المرور المؤقتة الحالية" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} required />
+                <input className="input text-sm" type="password" autoComplete="new-password" minLength={12} placeholder="كلمة المرور الجديدة (12 خانة على الأقل)" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required />
+                <input className="input text-sm" type="password" autoComplete="new-password" minLength={12} placeholder="تأكيد كلمة المرور الجديدة" value={confirmNewPassword} onChange={(event) => setConfirmNewPassword(event.target.value)} required />
+                <button type="submit" className="btn btn-gold w-full" disabled={passwordChangeBusy}>{passwordChangeBusy ? "يجري التحديث..." : "حفظ كلمة المرور الجديدة"}</button>
+              </form>
             </div>
           )}
 
@@ -2933,6 +2953,57 @@
                     <div className="text-xs font-bold text-[var(--muted)]">رسائل الأولياء</div>
                   </div>
                 </div>
+                    <section className="card p-4 space-y-3" aria-label="إدارة السحابة والمزامنة">
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="text-sm font-black text-[#E8C84A]">الربط السحابي والمزامنة</h3>
+                        <span className={`text-[10px] font-black px-2 py-1 rounded-full ${cloudStatus === "online" ? "bg-emerald-500/15 text-emerald-700" : "bg-amber-500/15 text-amber-700"}`}>
+                          {cloudStatus === "online" ? "متصل" : cloudStatus === "offline" ? "دون إنترنت" : cloudStatus === "syncing" ? "يجري الاتصال" : "بانتظار المزامنة"}
+                        </span>
+                      </div>
+                      <p className="text-xs font-bold text-[var(--muted)] leading-6">قاعدة بيانات المدرسة في منطقة سنغافورة. تحفظ التغييرات محلياً، ثم ترفع إلى السحابة عند عودة الإنترنت. {cloudLastSync ? `آخر مزامنة ${cloudLastSync}` : "لم تسجل مزامنة في هذه الجلسة بعد."}</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button type="button" className="btn btn-olive text-xs" onClick={() => pullCloudSnapshot().then(() => notify("تم تحديث نسخة المدرسة من السحابة.")).catch(() => notify("تعذر جلب بيانات السحابة الآن."))}>مزامنة الآن</button>
+                        <button type="button" className="btn btn-gold text-xs" disabled={seedBusy} onClick={seedSchoolCloud}>{seedBusy ? "يجري التحميل..." : "تهيئة البيانات الافتراضية"}</button>
+                      </div>
+                      <p className="text-[10px] font-bold text-[var(--muted)]">تهيئة البيانات الافتراضية تنفذ مرة واحدة وتستورد بيانات العرض الحالية فقط. لا تستبدلها بسجلات حقيقية قبل مراجعتها.</p>
+                      {seedCredentials.length > 0 && (
+                        <div className="rounded-xl border border-amber-500/50 bg-amber-500/10 p-3 space-y-2">
+                          <strong className="text-xs">حسابات التفعيل التي أصدرت للتو</strong>
+                          <p className="text-[10px] leading-5">تظهر كلمات المرور المؤقتة مرة واحدة فقط. انسخها واحفظها بأمان ثم وزع كل حساب على صاحبه.</p>
+                          <div className="max-h-52 overflow-auto space-y-2">
+                            {seedCredentials.map((account) => (
+                              <div key={account.role + account.login_id} className="grid grid-cols-[1fr_auto] gap-2 text-[10px] rounded-lg bg-[var(--surface)] p-2">
+                                <span className="min-w-0 break-words"><strong>{account.display_name}</strong><br />{account.role} • {account.login_id}</span>
+                                <button type="button" className="btn btn-ghost !min-h-8 !py-1 !px-2 text-[10px]" onClick={() => GenUI.copy(`المعرّف: ${account.login_id}\\nكلمة المرور المؤقتة: ${account.password}`)}>نسخ</button>
+                              </div>
+                            ))}
+                          </div>
+                          <button type="button" className="btn btn-ghost w-full text-xs" onClick={() => GenUI.copy(seedCredentials.map((account) => `${account.role} | ${account.login_id} | ${account.password}`).join("\\n"))}>نسخ جميع حسابات التفعيل</button>
+                        </div>
+                      )}
+                      <details className="rounded-xl border border-[var(--line)] p-3">
+                        <summary className="cursor-pointer text-xs font-black">إنشاء حساب مدرسي جديد</summary>
+                        <div className="mt-3 space-y-2">
+                          <select className="input text-xs" value={cloudAccountForm.role} onChange={(event) => setCloudAccountForm((previous) => ({ ...previous, role:event.target.value }))}>
+                            <option value="teacher">معلم</option><option value="student">طالب</option><option value="parent">ولي أمر</option><option value="admin">مشرف عام</option>
+                          </select>
+                          <input className="input text-xs" placeholder="رقم القيد أو الرمز الوظيفي" value={cloudAccountForm.login_id} onChange={(event) => setCloudAccountForm((previous) => ({...previous,login_id:event.target.value}))} />
+                          <input className="input text-xs" placeholder="اسم صاحب الحساب" value={cloudAccountForm.display_name} onChange={(event) => setCloudAccountForm((previous) => ({...previous,display_name:event.target.value}))} />
+                          {(cloudAccountForm.role === "student" || cloudAccountForm.role === "parent") && <input className="input text-xs" placeholder="رقم قيد الطالب المرتبط" value={cloudAccountForm.student_id} onChange={(event) => setCloudAccountForm((previous) => ({...previous,student_id:event.target.value}))} />}
+                          {cloudAccountForm.role === "teacher" && <select className="input text-xs" value={cloudAccountForm.grade} onChange={(event) => setCloudAccountForm((previous) => ({...previous,grade:event.target.value}))}><option value="">اختر الصف المكلف به</option>{CURRICULUM_GRADES.map((grade) => <option key={grade} value={grade}>{grade}</option>)}</select>}
+                          <button type="button" disabled={cloudAccountBusy} className="btn btn-gold w-full text-xs" onClick={createSchoolAccount}>{cloudAccountBusy ? "يجري إنشاء الحساب..." : "إنشاء حساب وإصدار كلمة مؤقتة"}</button>
+                          {issuedCloudAccount && (
+                            <div className="rounded-lg bg-[var(--surface2)] p-3 text-xs space-y-1">
+                              <strong>تم إنشاء الحساب</strong>
+                              <div>المعرّف: {issuedCloudAccount.login_id}</div>
+                              <div>كلمة المرور المؤقتة: <bdi>{issuedCloudAccount.password}</bdi></div>
+                              <button type="button" className="btn btn-ghost !min-h-8 !py-1 text-xs" onClick={() => GenUI.copy(`المعرّف: ${issuedCloudAccount.login_id}\\nكلمة المرور المؤقتة: ${issuedCloudAccount.password}`)}>نسخ بيانات التفعيل</button>
+                            </div>
+                          )}
+                        </div>
+                      </details>
+                    </section>
+
                     <section className="card p-4 space-y-2">
                       <h3 className="text-sm font-black text-[#E8C84A]">تقارير المدرسة</h3>
                       <div className="grid grid-cols-2 gap-2">
@@ -3223,23 +3294,11 @@
                 </div>
 
                 <details className="ai-sheet-settings">
-                  <summary>إعدادات المطور المتقدمة</summary>
-                  <div className="mt-3 space-y-2">
-                    <label className="block text-xs font-black" htmlFor="alnoor-proxy-url">رابط الخادم الوسيط (اختياري)</label>
-                    <input
-                      id="alnoor-proxy-url"
-                      type="url"
-                      inputMode="url"
-                      autoComplete="url"
-                      maxLength={500}
-                      className="input text-xs"
-                      dir="ltr"
-                      placeholder="https://your-worker.workers.dev/chat"
-                      value={aiSettings.proxyUrl || ""}
-                      onChange={(event) => setAiSettings((previous) => ({ proxyUrl: event.target.value.trim().slice(0, 500) }))}
-                    />
-                    <p className="source-note">اترك الحقل فارغاً لاستخدام اتصال Pollinations العام دون مفتاح. يقبل الوسيط طلب POST يحتوي question و system و context، ويعيد reply أو answer. ضع مفاتيح Gemini أو Groq في أسرار الخادم الوسيط فقط، ولا تضعها هنا.</p>
-                    <p className="source-note">الاتصال العام يعتمد على خدمة خارجية وقد يخضع للتوقف أو تحديد الاستخدام. لا ترسل بيانات الطلاب الشخصية عبره. عند تعذر الإنترنت يرجع المساعد إلى دروس هذا الجهاز.</p>
+                  <summary>حالة مساعد نور السحابي</summary>
+                  <div className="mt-3 rounded-xl bg-[var(--surface)] border border-[var(--line)] p-3 space-y-2 text-xs font-bold leading-6">
+                    <p>يصل المساعد إلى وسيط المدرسة بعد تسجيل الدخول. أسرار مزود الذكاء الاصطناعي لا تُرسل إلى جهازك ولا تُحفظ في التطبيق.</p>
+                    <p>عند عدم توفر مزود خارجي أو عند انقطاع الشبكة، يستخدم التطبيق محرك الدروس المحلي. لا يمكن ضمان إتاحة خدمة مجانية خارجية مدى الحياة.</p>
+                    <p className="text-[var(--muted)]">حالة الاتصال: {cloudStatus === "online" ? "متصل" : cloudStatus === "offline" ? "دون اتصال" : cloudStatus === "syncing" ? "يجري الاتصال" : "المزامنة معلّقة"}</p>
                   </div>
                 </details>
 
