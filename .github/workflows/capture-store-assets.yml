@@ -75,7 +75,7 @@ jobs:
             // Publish the missing web/PWA logo files before capturing the published site.
             execFileSync("git",["config","user.name","github-actions[bot]"]);
             execFileSync("git",["config","user.email","41898282+github-actions[bot]@users.noreply.github.com"]);
-            execFileSync("git",["add",out+"/icon-512.png",out+"/feature-graphic-1024x500.png","logo.png","logo-192.png","logo-512.png","apple-touch-icon.png"]);
+            execFileSync("git",["add","-f",out+"/icon-512.png",out+"/feature-graphic-1024x500.png","logo.png","logo-192.png","logo-512.png","apple-touch-icon.png"]);
             execFileSync("git",["commit","-m","Add Alnoor School brand and Play Store graphics"]);
             execFileSync("git",["push","origin","main"]);
 
@@ -155,7 +155,7 @@ jobs:
 
             // The one-shot capture workflow removes itself after producing the files.
             execFileSync("git",["rm",".github/workflows/capture-store-assets.yml"]);
-            execFileSync("git",["add",out+"/screenshots",out+"/google-play-submission-v2.0.4.zip"]);
+            execFileSync("git",["add","-f",out+"/screenshots",out+"/google-play-submission-v2.0.4.zip"]);
             execFileSync("git",["commit","-m","Add verified Alnoor School Play listing screenshots and package"]);
             execFileSync("git",["push","origin","main"]);
           })().catch(error => { console.error(error); process.exit(1); });
