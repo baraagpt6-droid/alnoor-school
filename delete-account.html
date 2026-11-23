@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#1C1914"><meta name="description" content="طلب حذف حساب وبيانات مدرسة النور"><title>طلب حذف الحساب والبيانات | مدرسة النور</title>
+<style>
+:root{color-scheme:light;--bg:#f5f0e5;--card:#fffdf7;--ink:#2b261d;--muted:#655b49;--line:#e4d8bd}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;line-height:1.9}
+main{width:min(720px,calc(100% - 28px));margin:28px auto 60px}.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px;margin-bottom:16px}
+h1,h2{line-height:1.5;color:#74531a}h1{font-size:clamp(24px,5vw,32px);margin:0}h2{font-size:18px;margin:0 0 8px}
+p,li{font-size:14px}.muted{color:var(--muted);font-size:12px}label{display:block;font-weight:800;font-size:13px;margin:12px 0 5px}
+input:not([type=checkbox]){width:100%;padding:13px;border:1px solid var(--line);border-radius:12px;background:#fff;color:#222;font:inherit}
+button{width:100%;margin-top:16px;padding:13px;border:0;border-radius:12px;background:#3f5a2a;color:white;font:800 15px system-ui;cursor:pointer}
+button:disabled{opacity:.6;cursor:wait}.status{margin-top:14px;padding:12px;border-radius:12px;background:#f3eddd;border:1px solid var(--line);font-size:13px;white-space:pre-wrap}
+.en{direction:ltr;text-align:left;border-top:1px solid var(--line);padding-top:14px;margin-top:16px}a{color:#765516}
+</style></head>
+<body><main>
+<section class="card"><h1>طلب حذف الحساب والبيانات</h1><p>استخدم هذه الصفحة لإرسال طلب إلى إدارة مدرسة النور لمراجعة حذف حسابك والبيانات الشخصية المرتبطة به.</p><p class="muted">هذه الصفحة تسجّل طلباً معلّقاً للتحقق من الهوية. لا يحذف النظام الحساب فور الإرسال.</p></section>
+<section class="card"><form id="delete-form">
+<label for="login-id">معرّف الحساب المدرسي</label><input id="login-id" name="login_id" autocomplete="off" maxlength="80" required placeholder="رقم القيد أو معرّف الحساب">
+<label for="contact-phone">رقم التواصل مع رمز الدولة</label><input id="contact-phone" name="contact_phone" type="tel" autocomplete="tel" maxlength="40" required placeholder="+967...">
+<label><input id="confirm" type="checkbox" required style="width:auto;margin-left:8px"> أؤكد أنني صاحب الحساب أو وليه/ممثله المخول وأطلب مراجعة حذفه.</label>
+<button id="submit" type="submit">إرسال طلب الحذف</button><div id="status" class="status" role="status" aria-live="polite" hidden></div>
+</form></section>
+<section class="card"><h2>ماذا يحدث بعد الإرسال؟</h2><ol><li>يسجل النظام الطلب في قائمة مراجعة إدارة المدرسة ويعرض رقماً مرجعياً.</li><li>تتواصل الإدارة عبر رقم التواصل المدخل للتحقق من هوية مقدم الطلب وصفته.</li><li>تراجع الإدارة الطلب وترد خلال 30 يوماً من اكتمال التحقق.</li><li>بعد الموافقة، تُحذف بيانات الدخول والمعلومات الشخصية التي لا يلزم الاحتفاظ بها.</li></ol>
+<h2>البيانات التي قد تُحذف</h2><p>بيانات تسجيل الدخول ومعرّفات الحساب والبيانات الشخصية التي لم تعد المدرسة بحاجة إليها، وفق نتيجة التحقق وإجراءات المدرسة.</p>
+<h2>البيانات التي قد يُحتفظ بها</h2><p>قد تحتفظ المدرسة بالسجلات التعليمية والدرجات والحضور والوثائق المطلوبة لأغراض السجل الدراسي أو الالتزامات النظامية. يحتفظ سجل طلب الحذف لمدة تصل إلى 12 شهراً لأغراض التدقيق ثم يحذف.</p>
+<p class="muted">إزالة التطبيق أو تسجيل الخروج لا يحذف البيانات المخزنة على خادم المدرسة.</p><p><a href="./privacy.html">سياسة الخصوصية</a></p></section>
+<section class="card en" lang="en"><h2>Account and data deletion request</h2><p>Submit your school account identifier and a contact phone number. The request is placed in a pending review queue. The school verifies your identity and responds within 30 days after verification.</p><p>After approval, login credentials and personal information no longer needed may be deleted. Educational records required for school records or legal obligations may be retained. Deletion-request audit records may be retained for up to 12 months.</p></section>
+</main>
+<script>
+(() => {
+ const API="https://br-falling-rain-azmx7t48-schoolapi.compute.c-3.ap-southeast-1.aws.neon.tech";
+ const form=document.getElementById("delete-form"),button=document.getElementById("submit"),status=document.getElementById("status");
+ form.addEventListener("submit",async(event)=>{
+  event.preventDefault();if(!form.reportValidity())return;
+  button.disabled=true;status.hidden=false;status.textContent="جارٍ إرسال الطلب...";
+  try{
+   const response=await fetch(API+"/api/account/deletion-request",{method:"POST",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({action:"request_account_deletion",login_id:document.getElementById("login-id").value.trim(),contact_phone:document.getElementById("contact-phone").value.trim()})});
+   const result=await response.json().catch(()=>({}));if(!response.ok)throw new Error(result.error||"تعذر إرسال الطلب. حاول مرة أخرى.");
+   status.textContent="تم استلام طلبك للمراجعة.\nالرقم المرجعي: "+(result.request_reference||"غير متاح")+"\nتتحقق إدارة المدرسة من الهوية وترد خلال 30 يوماً. لا يتم حذف الحساب تلقائياً عند الإرسال.";form.reset();
+  }catch(error){status.textContent=error.message||"تعذر إرسال الطلب. تحقق من الاتصال وحاول مرة أخرى.";}
+  finally{button.disabled=false;}
+ });
+})();
+</script></body></html>

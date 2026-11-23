@@ -733,7 +733,7 @@
     ========================================================================= */
     const STORAGE_KEY = "alnoor_madrasti_v3_full";
     const AI_SETTINGS_KEY = "alnoor_ai_preferences_v1";
-    const APP_VERSION = "2.0.3";
+    const APP_VERSION = "2.0.4";
     const CLOUD_API_BASE = "https://br-falling-rain-azmx7t48-schoolapi.compute.c-3.ap-southeast-1.aws.neon.tech";
     const CLOUD_REALTIME_URL = "https://ep-nameless-lake-azw1q6rt.rt.c-3.ap-southeast-1.aws.neon.tech/";
     const CLOUD_SESSION_KEY = "alnoor_cloud_session_v2";
@@ -1101,6 +1101,10 @@
       const [autoRotate3D, setAutoRotate3D] = useState(true);
 
       // المساعد الذكي الخاص بكل دور
+      const [accountDeletionOpen, setAccountDeletionOpen] = useState(false);
+      const [accountDeletionPhone, setAccountDeletionPhone] = useState("");
+      const [accountDeletionBusy, setAccountDeletionBusy] = useState(false);
+      const [accountDeletionReference, setAccountDeletionReference] = useState("");
       const [aiOpen, setAiOpen] = useState(false);
       const [aiInput, setAiInput] = useState("");
       const [aiHistoryByRole, setAiHistoryByRole] = useState({
@@ -1527,6 +1531,23 @@
           notify("تم إنشاء الحساب. احفظ كلمة المرور المؤقتة ووزعها لصاحبها.");
         } catch (error) { notify(error.message || "تعذر إنشاء الحساب."); }
         finally { setCloudAccountBusy(false); }
+      };
+
+      const submitAccountDeletionRequest = async (event) => {
+        event.preventDefault();
+        if (!cloudSession?.token) { notify("سجّل الدخول أو استخدم صفحة الحذف على الويب."); return; }
+        setAccountDeletionBusy(true);
+        try {
+          const result = await cloudRequest("/api/account/deletion-request", {
+            method: "POST",
+            body: { action: "request_account_deletion", contact_phone: accountDeletionPhone },
+            token: cloudSession.token
+          });
+          setAccountDeletionReference(result.request_reference || "");
+          notify("تم استلام طلب الحذف وإحالته إلى إدارة المدرسة.");
+        } catch (error) {
+          notify(error.message || "تعذر إرسال طلب الحذف.");
+        } finally { setAccountDeletionBusy(false); }
       };
 
       const currentStudent = useMemo(
@@ -2133,6 +2154,8 @@
                 </section>
                 <p className="text-center text-xs font-bold text-[var(--muted)]">
                   <a href="https://baraagpt6-droid.github.io/alnoor-school/privacy.html" className="underline underline-offset-4" rel="noopener noreferrer">سياسة الخصوصية | Privacy Policy</a>
+                  <span className="px-1">·</span>
+                  <a href="https://baraagpt6-droid.github.io/alnoor-school/delete-account.html" className="underline underline-offset-4" rel="noopener noreferrer">طلب حذف الحساب | Delete account</a>
                 </p>
               </form>
             </div>
@@ -2232,22 +2255,44 @@
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                setRole(null);
-                setAiOpen(false);
-                setCloudSession(null);
-                setPreviewMode(false);
-                setMustChangePassword(false);
-                localStorage.removeItem(CLOUD_SESSION_KEY);
-              }}
-              className="px-3.5 py-2 rounded-xl bg-[#8A4A22] text-[#FFF8E6] text-xs font-black shrink-0 flex items-center gap-1.5 hover:brightness-110"
-            >
-              <span>خروج</span>
-              <span>↩</span>
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button type="button" onClick={() => { setAccountDeletionReference(""); setAccountDeletionOpen(true); }} className="px-2.5 py-2 rounded-xl border border-[#A45A3A] text-[#A45A3A] text-[10px] sm:text-xs font-black">حذف الحساب</button>
+              <button type="button" onClick={() => {
+                setRole(null); setAiOpen(false); setCloudSession(null); setPreviewMode(false);
+                setMustChangePassword(false); localStorage.removeItem(CLOUD_SESSION_KEY);
+              }} className="px-3 py-2 rounded-xl bg-[#8A4A22] text-[#FFF8E6] text-xs font-black">خروج ↩</button>
+            </div>
           </header>
+
+          {accountDeletionOpen && (
+            <div className="fixed inset-0 z-[2300] grid place-items-center bg-black/70 p-4">
+              <section className="card w-full max-w-md p-5 space-y-3 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="account-deletion-title">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 id="account-deletion-title" className="text-base font-black text-[#E8C84A]">طلب حذف الحساب والبيانات</h2>
+                  <button type="button" className="ai-sheet-close" onClick={() => setAccountDeletionOpen(false)} aria-label="إغلاق">×</button>
+                </div>
+                {accountDeletionReference ? (
+                  <div className="space-y-3 text-sm leading-7">
+                    <p>تم تسجيل طلبك وإحالته إلى إدارة المدرسة للتحقق من الهوية.</p>
+                    <p>رقم الطلب: <bdi dir="ltr" className="font-black">{accountDeletionReference}</bdi></p>
+                    <p>تراجع الإدارة الطلب وترد خلال 30 يوماً. لا يتم حذف الحساب تلقائياً بمجرد الإرسال.</p>
+                    <button type="button" onClick={() => setAccountDeletionOpen(false)} className="btn btn-gold w-full">إغلاق</button>
+                  </div>
+                ) : (
+                  <form className="space-y-3" onSubmit={submitAccountDeletionRequest}>
+                    <p className="text-xs font-bold text-[var(--muted)] leading-6">الحساب المسجل: <bdi dir="ltr">{cloudSession?.user?.login_id || "غير متاح"}</bdi>. أدخل رقم تواصل تتحقق منه إدارة المدرسة قبل تنفيذ الحذف.</p>
+                    <input className="input text-sm" type="tel" autoComplete="tel" maxLength={40} placeholder="رقم التواصل مع رمز الدولة" value={accountDeletionPhone} onChange={(event) => setAccountDeletionPhone(event.target.value)} required />
+                    <label className="flex items-start gap-2 text-xs font-bold leading-6">
+                      <input type="checkbox" required className="mt-1" />
+                      أطلب مراجعة حذف حسابي والبيانات المرتبطة به، وأفهم أن السجلات التعليمية التي يجب الاحتفاظ بها قد تبقى وفق المتطلبات النظامية.
+                    </label>
+                    <button type="submit" disabled={accountDeletionBusy || !cloudSession?.token} className="btn btn-gold w-full">{accountDeletionBusy ? "جارٍ إرسال الطلب..." : "إرسال طلب الحذف"}</button>
+                    <a className="block text-center text-xs font-bold underline" href="https://baraagpt6-droid.github.io/alnoor-school/delete-account.html" target="_blank" rel="noopener noreferrer">فتح صفحة طلب الحذف على الويب</a>
+                  </form>
+                )}
+              </section>
+            </div>
+          )}
 
           {/* إشعار عائم */}
           {toast && (
@@ -2584,6 +2629,7 @@
                   <div className="card p-4 space-y-4">
                     <h3 className="text-base font-black text-[#E8C84A]">إعدادات التطبيق وإمكانية الوصول</h3>
                     <p className="demo-settings-note" role="note">نسخة تجريبية محلية. التغييرات محفوظة على هذا الجهاز فقط ولا تنتقل إلى أجهزة أخرى دون خادم مدرسي.</p>
+                    <a href="https://baraagpt6-droid.github.io/alnoor-school/delete-account.html" className="btn btn-ghost w-full text-xs">طلب حذف الحساب والبيانات</a>
                     <div className="flex items-center justify-between p-3 rounded-2xl bg-[var(--surface2)]">
                       <div>
                         <div className="text-sm font-black">الوضع الداكن (الافتراضي)</div>
@@ -3406,8 +3452,14 @@
                 <details className="ai-sheet-settings">
                   <summary>حالة مساعد نور السحابي</summary>
                   <div className="mt-3 rounded-xl bg-[var(--surface)] border border-[var(--line)] p-3 space-y-2 text-xs font-bold leading-6">
-                    <p>يصل المساعد إلى وسيط المدرسة بعد تسجيل الدخول. أسرار مزود الذكاء الاصطناعي لا تُرسل إلى جهازك ولا تُحفظ في التطبيق.</p>
-                    <p>عند عدم توفر مزود خارجي أو عند انقطاع الشبكة، يستخدم التطبيق محرك الدروس المحلي. لا يمكن ضمان إتاحة خدمة مجانية خارجية مدى الحياة.</p>
+                    {role === "student" ? (
+                      <p>مساعد الطالب يعمل من المحتوى المنهجي المخزن داخل المدرسة فقط. لا يرسل أسئلة الطالب أو اسمه أو رقم قيده أو صفه إلى أي مزوّد ذكاء اصطناعي خارجي.</p>
+                    ) : (
+                      <>
+                        <p>تمر أسئلة حسابات الإدارة والمعلمين وأولياء الأمور عبر خادم المدرسة. يحذف الخادم معرّفات الطلاب المعروفة وأرقام التواصل قبل إرسال السؤال إلى المزوّد الخارجي.</p>
+                        <p>لا تضع معلومات شخصية أو صحية أو كلمات مرور في أسئلة المساعد.</p>
+                      </>
+                    )}
                     <p className="text-[var(--muted)]">حالة الاتصال: {cloudStatus === "online" ? "متصل" : cloudStatus === "offline" ? "دون اتصال" : cloudStatus === "syncing" ? "يجري الاتصال" : "المزامنة معلّقة"}</p>
                   </div>
                 </details>

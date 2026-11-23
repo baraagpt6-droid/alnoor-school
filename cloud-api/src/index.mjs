@@ -673,53 +673,138 @@ async function syncStudentProgress(account, body) {
   } finally { client.release(); }
 }
 
+async function localStudentCurriculumReply(account, question) {
+  // Student questions stay on the school API and are answered from school-hosted lessons only.
+  const result = await pool.query(
+    "SELECT subject,title,payload FROM public.lessons WHERE grade IS NULL OR grade=$1 ORDER BY updated_at DESC LIMIT 100",
+    [account.grade || null]
+  );
+  const words = question.toLocaleLowerCase("ar").split(/[^\p{L}\p{N}]+/u).filter((word) => word.length > 2);
+  const rows = result.rows.map((row) => {
+    const payload = parseJson(row.payload, {});
+    const sentences = Array.isArray(payload.sentences)
+      ? payload.sentences.map((item) => typeof item === "string" ? item : item?.text || "").filter(Boolean).join(" ")
+      : "";
+    const body = [payload.content, payload.summary, payload.explanation, payload.description, payload.body, sentences]
+      .filter((item) => typeof item === "string" && item.trim()).join(" ").slice(0, 2200);
+    const searchable = [row.title, row.subject, body].join(" ").toLocaleLowerCase("ar");
+    const score = words.reduce((sum, word) => sum + (searchable.includes(word) ? 1 : 0), 0);
+    return { title: row.title, subject: row.subject, body, score };
+  });
+  rows.sort((a, b) => b.score - a.score);
+  const matches = rows.filter((row) => row.score > 0).slice(0, 3);
+  if (!matches.length) {
+    return {
+      reply: result.rows.length
+        ? "أنا مساعد نور المحلي. لم أجد درساً مطابقاً في المحتوى المنهجي المحفوظ للصف. اكتب اسم المادة أو عنوان الدرس، أو اسأل عن مفهوم دراسي عام."
+        : "محتوى المنهج لهذا الصف غير متاح حالياً على خادم المدرسة. أرسل اسم المادة والدرس إلى معلمك ليضيف المحتوى المعتمد.",
+      provider: "school-curriculum-local"
+    };
+  }
+  const reply = matches.map((row, index) => {
+    const detail = row.body || "لا يتوفر شرح نصي لهذا الدرس في قاعدة المنهج حالياً.";
+    return (index + 1) + ". " + [row.subject, row.title].filter(Boolean).join(" — ") + "\n" + detail;
+  }).join("\n\n");
+  return { reply: "إجابة من محتوى المنهج المخزن داخل المدرسة:\n\n" + reply, provider: "school-curriculum-local" };
+}
+
+async function removeStudentIdentifiers(question) {
+  const found = await pool.query(
+    "SELECT full_name AS value FROM public.students WHERE full_name IS NOT NULL UNION ALL SELECT id FROM public.students WHERE id IS NOT NULL UNION ALL SELECT admission_no FROM public.students WHERE admission_no IS NOT NULL UNION ALL SELECT parent_phone FROM public.students WHERE parent_phone IS NOT NULL UNION ALL SELECT display_name FROM public.school_accounts WHERE role='student' UNION ALL SELECT login_id FROM public.school_accounts WHERE role='student'"
+  );
+  let safe = String(question || "");
+  const values = [...new Set(found.rows.map((row) => String(row.value || "").trim()).filter((value) => value.length >= 3))]
+    .sort((a, b) => b.length - a.length);
+  for (const value of values) {
+    const lowerValue = value.toLocaleLowerCase("ar");
+    let at = safe.toLocaleLowerCase("ar").indexOf(lowerValue);
+    while (at >= 0) {
+      safe = safe.slice(0, at) + "[بيانات طالب محذوفة]" + safe.slice(at + value.length);
+      at = safe.toLocaleLowerCase("ar").indexOf(lowerValue, at + 20);
+    }
+  }
+  safe = safe.replace(/\+?\d[\d\s().-]{6,}\d/g, "[رقم محذوف]");
+  return safe.slice(0, 1000);
+}
+
 async function assistant(account, body) {
   const question = String(body.question || "").trim().slice(0,1000);
   if (!question) throw httpError("اكتب سؤالك أولاً.", 400);
   const recent = await pool.query("SELECT count(*)::int AS n FROM public.assistant_usage WHERE account_id=$1 AND created_at > now() - interval '1 minute'", [account.id]);
   if (recent.rows[0].n >= 12) throw httpError("وصلت إلى حد الأسئلة المؤقت. حاول بعد دقيقة.", 429);
   await pool.query("INSERT INTO public.assistant_usage(account_id) VALUES($1)", [account.id]);
+
+  if (account.role === "student") return await localStudentCurriculumReply(account, question);
+
+  const safeQuestion = await removeStudentIdentifiers(question);
+  if (!safeQuestion.trim()) throw httpError("أزل بيانات الطالب من السؤال ثم حاول مرة أخرى.", 400);
   const system = [
-    "أنت مساعد نور التعليمي لمدرسة يمنية. أجب بالعربية الواضحة.",
+    "أنت مساعد تعليمي لمدرسة يمنية. أجب بالعربية الواضحة.",
     "ساعد في المنهج اليمني والعلوم العامة. اشرح الرياضيات خطوة بخطوة والنحو مع أمثلة.",
     "لا تخترع نصوص الكتب أو أرقام الصفحات. ميّز بين المعلومات المؤكدة والتخمين.",
-    "دور السائل: " + account.role + ". الصف: " + (account.grade || "غير محدد") + "."
+    "لا تطلب بيانات الطلاب الشخصية ولا تستنتجها."
   ].join("\n");
   if (process.env.GEMINI_API_KEY) {
     const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
     const url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent?key=" + encodeURIComponent(process.env.GEMINI_API_KEY);
     const response = await fetch(url, {
-      method: "POST", headers: { "content-type": "application/json" },
-      signal: AbortSignal.timeout(22000),
-      body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: question }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 1200 } })
+      method: "POST", headers: { "content-type": "application/json" }, signal: AbortSignal.timeout(22000),
+      body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: safeQuestion }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 1200 } })
     });
     const payload = await response.json().catch(() => ({}));
     const reply = payload?.candidates?.[0]?.content?.parts?.map((x) => x.text || "").join("").trim();
-    if (response.ok && reply) return { reply, provider: "gemini" };
+    if (response.ok && reply) return { reply, provider: "gemini-anonymized" };
     throw httpError("خدمة المساعد غير متاحة حالياً.", 503);
   }
   if (process.env.GROQ_API_KEY) {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
-      headers: { "content-type": "application/json", authorization: "Bearer " + process.env.GROQ_API_KEY },
-      signal: AbortSignal.timeout(22000),
-      body: JSON.stringify({ model: process.env.GROQ_MODEL || "llama-3.3-70b-versatile", messages: [{ role: "system", content: system }, { role: "user", content: question }], temperature: 0.4, max_tokens: 1200 })
+      headers: { "content-type": "application/json", authorization: "Bearer " + process.env.GROQ_API_KEY }, signal: AbortSignal.timeout(22000),
+      body: JSON.stringify({ model: process.env.GROQ_MODEL || "llama-3.3-70b-versatile", messages: [{ role: "system", content: system }, { role: "user", content: safeQuestion }], temperature: 0.4, max_tokens: 1200 })
     });
     const payload = await response.json().catch(() => ({}));
     const reply = payload?.choices?.[0]?.message?.content?.trim();
-    if (response.ok && reply) return { reply, provider: "groq" };
+    if (response.ok && reply) return { reply, provider: "groq-anonymized" };
     throw httpError("خدمة المساعد غير متاحة حالياً.", 503);
   }
   const response = await fetch("https://text.pollinations.ai/openai", {
-    method: "POST",
-    headers: { "content-type": "application/json", accept: "application/json" },
-    signal: AbortSignal.timeout(22000),
-    body: JSON.stringify({ model: process.env.AI_MODEL || "openai-fast", messages: [{ role: "system", content: system }, { role: "user", content: question }], temperature: 0.4, max_tokens: 1100 })
+    method: "POST", headers: { "content-type": "application/json", accept: "application/json" }, signal: AbortSignal.timeout(22000),
+    body: JSON.stringify({ model: process.env.AI_MODEL || "openai-fast", messages: [{ role: "system", content: system }, { role: "user", content: safeQuestion }], temperature: 0.4, max_tokens: 1100 })
   });
   const payload = await response.json().catch(() => ({}));
   const reply = payload?.choices?.[0]?.message?.content || payload.reply || payload.answer || payload.text;
   if (!response.ok || typeof reply !== "string" || !reply.trim()) throw httpError("خدمة المساعد الخارجية غير متاحة. سيستخدم التطبيق المحرك المحلي.", 503);
-  return { reply: reply.trim().slice(0,9000), provider: "pollinations" };
+  return { reply: reply.trim().slice(0,9000), provider: "pollinations-anonymized" };
+}
+
+async function requestAccountDeletion(request, body) {
+  if (body.action !== "request_account_deletion") throw httpError("نوع الطلب غير صحيح.", 400);
+  const hasToken = Boolean((request.headers.get("authorization") || "").trim());
+  const account = hasToken ? await requireAccount(request, true) : null;
+  const loginId = account ? account.login_id : idText(body.login_id).toUpperCase();
+  const contactPhone = String(body.contact_phone || "").trim().slice(0,40);
+  if (!loginId || loginId.length < 3 || loginId.length > 80) throw httpError("أدخل معرّف الحساب المدرسي.", 400);
+  if (!/^\+?[0-9][0-9\s().-]{5,28}$/.test(contactPhone)) throw httpError("أدخل رقم تواصل صحيحاً مع رمز الدولة عند الحاجة.", 400);
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const ipHash = createHash("sha256").update(ip).digest("hex");
+  const reference = "ALN-" + randomBytes(5).toString("hex").toUpperCase();
+  await pool.query("DELETE FROM public.account_deletion_requests WHERE status IN ('completed','rejected') AND resolved_at < now() - interval '12 months'");
+  const result = await pool.query(
+    \`INSERT INTO public.account_deletion_requests
+      (request_reference, account_id, login_id, account_role, contact_phone, request_source, request_ip_hash)
+     SELECT $1,$2,$3,$4,$5,$6,$7
+     WHERE (SELECT count(*) FROM public.account_deletion_requests WHERE request_ip_hash=$7 AND requested_at > now() - interval '1 day') < 5
+     ON CONFLICT (login_id) WHERE status='pending'
+     DO UPDATE SET contact_phone=EXCLUDED.contact_phone, request_source=EXCLUDED.request_source, updated_at=now()
+     RETURNING request_reference, requested_at\`,
+    [reference, account?.id || null, loginId, account?.role || null, contactPhone, account ? "in-app" : "web", ipHash]
+  );
+  if (!result.rowCount) throw httpError("تم تجاوز عدد طلبات الحذف المسموح لهذا الاتصال. حاول لاحقاً.", 429);
+  return {
+    ok: true, action: "request_account_deletion", request_reference: result.rows[0].request_reference,
+    requested_at: result.rows[0].requested_at, status: "pending",
+    message: "تم استلام طلبك وإحالته إلى إدارة المدرسة للتحقق من الهوية. لا يُحذف الحساب تلقائياً عند الإرسال. تراجع الإدارة الطلب وترد خلال 30 يوماً."
+  };
 }
 
 async function sealRealtime(account) {
@@ -738,10 +823,13 @@ export default {
     try {
       if (request.method === "GET" && (path === "/" || path === "/health" || path === "/api/health")) {
         const result = await pool.query("SELECT current_database() AS database, now() AS server_time, 1 AS healthy");
-        return send(request, { ok: true, service: "alnoor-school-api", version: "2.0.2", database: result.rows[0] });
+        return send(request, { ok: true, service: "alnoor-school-api", version: "2.0.4", database: result.rows[0] });
       }
       if (request.method === "POST" && path === "/api/bootstrap/initial-admin") {
         return send(request, await bootstrapInitialAdmin(await readBody(request)));
+      }
+      if (request.method === "POST" && path === "/api/account/deletion-request") {
+        return send(request, await requestAccountDeletion(request, await readBody(request)));
       }
       if (request.method === "POST" && path === "/api/auth/login") {
         return send(request, await login(request, await readBody(request)));

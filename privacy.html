@@ -59,13 +59,13 @@
     <h2>4. التخزين والخدمات التي تعالج البيانات</h2>
     <p>تُرسل بيانات الحساب والمزامنة إلى واجهة الخادم المدرسي عبر HTTPS. يتصل الخادم بقاعدة بيانات Neon باستخدام اتصال TLS مع التحقق من الشهادة. وتوضح Neon أن بياناتها المخزنة مشفرة أثناء النقل وعند التخزين وفق ضوابط المنصة.</p>
     <p>تُستضاف قاعدة البيانات المستخدمة لهذا النظام في منطقة AWS في سنغافورة (ap-southeast-1). وتخضع بيانات المدرسة كذلك لإعدادات الوصول والصلاحيات المطبقة على حسابات النظام.</p>
-    <p>الاختبار الحي للخادم بتاريخ 23 نوفمبر 2026 أكد أن المزوّد المستخدم حالياً هو Pollinations عبر واجهة النص. يرسل الخادم نص السؤال وسياق الدور والصف إلى Pollinations لمعالجة الطلب. وقد يمرّر Pollinations الطلب إلى الجهة المستضيفة للنموذج المختار أو مزوّد احتياطي؛ وتختلف شروط الاحتفاظ والأمان باختلاف المزوّد والمسار، ولا تتحكم المدرسة في أنظمة المزوّدين النهائيين. يدعم كود الخادم أيضاً Google Gemini أو Groq عند إضافة مفاتيحهما إلى إعدادات الخادم، وعندها يتغير الطرف الذي يستقبل الطلب. لذلك لا تكتب كلمات مرور أو أرقام هوية أو أسماء طلاب أو بيانات شخصية أو صحية في أسئلة مساعد نور.</p>
+    <p>مساعد حساب الطالب يعمل على خادم المدرسة فقط ويبحث في محتوى الدروس المخزن في قاعدة بيانات المدرسة. لا يُرسل سؤال الطالب أو اسمه أو رقم قيده أو صفه أو سجله إلى أي مزوّد ذكاء اصطناعي خارجي. بالنسبة إلى حسابات الإدارة والمعلمين وأولياء الأمور، قد يرسل الخادم نص السؤال بعد إزالة أسماء الطلاب ومعرّفاتهم وأرقام التواصل المعروفة إلى مزوّد خارجي محدد على الخادم، وقد يمرّر المزوّد الطلب إلى مستضيف النموذج أو مزوّد احتياطي. لا تضع معلومات شخصية أو صحية أو كلمات مرور في أسئلة المساعد.</p>
     <p>يحفظ التطبيق على الجهاز بعض بيانات العمل والجلسة في تخزين المتصفح المحلي لتسهيل الاستخدام. قد تبقى هذه البيانات على الجهاز حتى مسح بيانات التطبيق أو المتصفح. حذف التطبيق أو تسجيل الخروج لا يضمن وحده حذف السجلات المحفوظة في قاعدة بيانات المدرسة.</p>
   </section>
 
   <section class="panel">
     <h2>5. مشاركة البيانات</h2>
-    <p>لا نبيع بيانات الطلاب أو أولياء الأمور. تُعالج البيانات داخل النظام المدرسي وتُتاح للأدوار المصرح لها بحسب صلاحياتها. وتُمرر الأسئلة المرسلة إلى مساعد نور إلى مزوّد الذكاء الاصطناعي المحدد على الخادم لمعالجة الطلب. كما تتولى Neon استضافة قاعدة البيانات وتوفير خدمة المزامنة. وقد تُكشف البيانات إذا تطلب القانون ذلك أو لحماية أمن النظام وحقوق المستخدمين.</p>
+    <p>لا نبيع بيانات الطلاب أو أولياء الأمور. تُعالج السجلات المدرسية داخل النظام وتُتاح للأدوار المصرح لها بحسب صلاحياتها. لا تُرسل أسئلة حسابات الطلاب إلى مزوّد ذكاء اصطناعي خارجي؛ أما أسئلة حسابات الموظفين وأولياء الأمور فقد تُرسل بعد إزالة أسماء الطلاب ومعرّفاتهم وأرقام التواصل المعروفة. تتولى Neon استضافة قاعدة البيانات وتوفير خدمة المزامنة. وقد تُكشف البيانات إذا تطلب القانون ذلك أو لحماية أمن النظام وحقوق المستخدمين.</p>
   </section>
 
   <section class="panel">
@@ -77,7 +77,7 @@
   <section class="panel">
     <h2>7. الاحتفاظ بالبيانات وطلبات التصحيح والحذف</h2>
     <p>تُحتفظ السجلات التعليمية والحسابات ما دامت لازمة لأعمال المدرسة وإدارة السجل الدراسي، أو حتى تطلب إدارة المدرسة حذفها وفق الإجراءات المعتمدة. يحذف الخادم سجلات محاولات تسجيل الدخول التي مضى عليها أكثر من 24 ساعة. لا يحدد الإصدار الحالي مدة حذف تلقائية موحدة لبقية السجلات.</p>
-    <p>يمكن للطالب أو ولي الأمر أو الموظف، أو وليه/ممثله عند الحاجة، طلب الاطلاع على بياناته أو تصحيحها أو حذف الحساب والبيانات المرتبطة به من إدارة المدرسة في العنوان المذكور أعلاه. تتحقق المدرسة من هوية مقدم الطلب وصفته قبل تنفيذ الطلب، وتوضح أي بيانات يلزم الاحتفاظ بها لأسباب مدرسية أو قانونية. لا يتضمن الإصدار الحالي زر حذف ذاتي للحساب داخل التطبيق؛ تتم معالجة هذه الطلبات بواسطة إدارة المدرسة.</p>
+    <p>يمكن إرسال طلب حذف الحساب والبيانات من زر «حذف الحساب» داخل التطبيق بعد تسجيل الدخول، أو من صفحة الويب العامة <a href="https://baraagpt6-droid.github.io/alnoor-school/delete-account.html">delete-account.html</a>. يطلب النموذج معرّف الحساب ورقم تواصل للتحقق. يسجل الخادم الطلب كطلب معلّق ويعطي رقماً مرجعياً؛ الإرسال لا يحذف الحساب تلقائياً. تتحقق إدارة المدرسة من هوية مقدم الطلب وصفته، وتراجع الطلب وترد خلال 30 يوماً من اكتمال التحقق. بعد الموافقة، تُحذف بيانات الدخول والمعلومات الشخصية التي لا يلزم الاحتفاظ بها، وقد تحتفظ المدرسة بالسجلات التعليمية المطلوبة لأغراض السجل الدراسي أو الالتزامات النظامية. يحتفظ سجل طلب الحذف لمدة تصل إلى 12 شهراً لأغراض التدقيق ثم يحذف. لا يؤدي إلغاء تثبيت التطبيق وحده إلى حذف البيانات السحابية.</p>
   </section>
 
   <section class="panel">
@@ -93,10 +93,10 @@
   <section class="panel en" lang="en">
     <h2>English summary</h2>
     <p>Alnoor School (com.alnoor.school) is operated by Alnoor School, Azlat Shibaa, Hubaysh District, Ibb Governorate, Yemen.</p>
-    <p>The service processes account identifiers and roles, student names and school records, grades, attendance, class information, parent names and phone numbers when entered, school messages, and text prompts sent to Noor Assistant. Data is used for authentication, school administration, learning records, synchronization, security, and AI responses.</p>
+    <p>The service processes account identifiers and roles, student names and school records, grades, attendance, parent contact details, school messages, and Noor Assistant prompts. Student-role prompts are handled only against school-hosted curriculum data and are not sent to external AI providers. Prompts from adult school roles may be sent after removing known student names, IDs, admission numbers, and phone numbers.</p>
     <p>School data is transmitted to the school API over HTTPS. The API connects to Neon using TLS certificate verification. The database is hosted in AWS ap-southeast-1 (Singapore). The live server test on 23 November 2026 confirmed Pollinations as the current Noor Assistant provider. The question text and role/grade context are sent to Pollinations. Pollinations may route requests to the selected model host or a fallback provider, whose retention and security practices can differ. The server code can also use Google Gemini or Groq if their API keys are configured later. Do not enter student names, passwords, identity numbers, health details, or other personal information in assistant prompts. The app does not currently declare Android camera, microphone, contacts, or location permissions, and no image/file upload feature was found in the reviewed Android manifest and app source.</p>
     <p>Some session and school data may be stored locally on the device. Passwords are stored server-side as bcrypt hashes. Login sessions expire after 12 hours. Login-attempt records older than 24 hours are removed automatically; the school controls retention of other school records.</p>
-    <p>Users or their guardians may request access, correction, or deletion by contacting the school administration at the physical address above. The current app version does not provide a self-service account deletion button. No official school phone number or email address was available in the project files at the time this policy was prepared.</p>
+    <p>Users or guardians can submit an account and data deletion request from the signed-in app or at https://baraagpt6-droid.github.io/alnoor-school/delete-account.html. The API records a pending request with a reference number; it does not automatically delete the account. The school verifies identity and responds within 30 days after verification. Login credentials and personal information not required for school records will be deleted after approval. Required educational records may be retained under school or legal obligations. Deletion-request audit records are retained for up to 12 months.</p>
   </section>
 
   <footer>مدرسة النور – Alnoor School · com.alnoor.school</footer>
