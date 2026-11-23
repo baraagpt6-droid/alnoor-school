@@ -124,7 +124,7 @@ jobs:
         run: |
           set -euo pipefail
           grep -Fq "applicationId 'com.alnoor.school'" android/app/build.gradle
-          grep -Fq "versionCode 130" android/app/build.gradle
+          grep -Fq "versionCode 200" android/app/build.gradle
           grep -Fq "versionName '2.0.0'" android/app/build.gradle
           grep -Fq "setTextAlignment(View.TEXT_ALIGNMENT_CENTER)" android/app/src/main/java/com/alnoor/school/MainActivity.java
           grep -Fq "document.getElementById('instant-splash')?.remove()" android/app/src/main/java/com/alnoor/school/MainActivity.java
