@@ -3,9 +3,9 @@
 منصة تعليمية تجريبية لمدرسة النور، بواجهة عربية من اليمين إلى اليسار ودعم تطبيق الويب التقدمي (PWA).
 
 ## النشر
-يتم نشر الإصدار من خلال GitHub Actions بعد تحديث فرع `main`. سير العمل يتحقق من بصمة الحزمة، يفحص سلامة ZIP، ثم ينشر محتوياتها إلى GitHub Pages.
+لأول مرة فقط، افتح **Settings → Pages** في هذا المستودع، ثم اجعل **Build and deployment → Source** على **GitHub Actions**. بعد تفعيل Pages، ينشر سير العمل الإصدار تلقائيًا عند تحديث فرع `main`.
 
-رابط الموقع: https://baraagpt6-droid.github.io/alnoor-school/
+رابط الموقع بعد اكتمال النشر: https://baraagpt6-droid.github.io/alnoor-school/
 
 ## محتويات الإصدار 1.1.1
 - واجهة التطبيق في `index.html` وتنسيقاتها في `styles.fixed.css`.
