@@ -1,0 +1,51 @@
+name: Build Alnoor cloud function bundle
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "cloud-api/**"
+      - ".github/workflows/build-neon-function.yml"
+  push:
+    branches: [main]
+    paths:
+      - "cloud-api/**"
+      - ".github/workflows/build-neon-function.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: cloud-api/package.json
+      - name: Install dependencies
+        working-directory: cloud-api
+        run: npm install --no-audit --no-fund
+      - name: Bundle function for Neon Node.js 24
+        working-directory: cloud-api
+        run: |
+          set -euo pipefail
+          npx esbuild src/index.mjs --bundle --platform=node --target=node24 --format=esm --outfile=dist/index.mjs
+          test -s dist/index.mjs
+          mkdir -p bundle
+          cp dist/index.mjs bundle/index.mjs
+          (cd bundle && zip -q -X ../alnoor-schoolapi-2.0.0.zip index.mjs)
+          unzip -t alnoor-schoolapi-2.0.0.zip
+          sha256sum alnoor-schoolapi-2.0.0.zip
+      - name: Upload Neon function bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: alnoor-schoolapi-2.0.0-bundle
+          path: cloud-api/alnoor-schoolapi-2.0.0.zip
+          if-no-files-found: error
+          retention-days: 7
