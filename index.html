@@ -1082,8 +1082,8 @@
       // حالة المصادقة والدور
       const [role, setRole] = useState(null); // null | "student" | "parent" | "teacher" | "admin"
       const [loginTab, setLoginTab] = useState("student");
-      const [loginId, setLoginId] = useState(DEMO_CREDENTIALS.student.id);
-      const [loginSecret, setLoginSecret] = useState(DEMO_CREDENTIALS.student.secret);
+      const [loginId, setLoginId] = useState("");
+      const [loginSecret, setLoginSecret] = useState("");
       const [loginError, setLoginError] = useState("");
       const [activeStudentId, setActiveStudentId] = useState("ST-101");
 
@@ -1636,61 +1636,68 @@
       };
 
       const selectLoginRole = (targetRole) => {
-        const credentials = DEMO_CREDENTIALS[targetRole] || DEMO_CREDENTIALS.student;
         setLoginTab(targetRole);
-        setLoginId(credentials.id);
-        setLoginSecret(credentials.secret);
+        setLoginId("");
+        setLoginSecret("");
         setLoginError("");
       };
 
-      const loginWithCredentials = (selectedRole, rawId, rawSecret) => {
+      const loginWithCredentials = async (selectedRole, rawId, rawSecret) => {
         const idClean = String(rawId || "").trim().toUpperCase();
-        const secClean = String(rawSecret || "").trim();
-
-        if (selectedRole === "student") {
-          const st = data.students.find((s) => String(s.id || "").toUpperCase() === idClean && String(s.pin || "") === secClean);
-          if (!st) return setLoginError("تعذر تسجيل الدخول. تحقق من البيانات وحاول مجدداً.");
-          setActiveStudentId(st.id);
-          setActiveLessonId(data.lessons.find((lesson) => lesson.grade === st.grade)?.id || data.lessons[0]?.id || "L1");
-          setLessonSearch("");
-          setLessonSubjectFilter("الكل");
-          setRole("student");
-          notify(`أهلاً بك يا ${st.name.split(" ")[0]}`);
-        } else if (selectedRole === "parent") {
-          const st = data.students.find((s) => String(s.id || "").toUpperCase() === idClean && String(s.parentPhone || "") === secClean);
-          if (!st) return setLoginError("تعذر التحقق من بيانات ولي الأمر. تحقق من البيانات وحاول مجدداً.");
-          setActiveStudentId(st.id);
-          setActiveLessonId(data.lessons.find((lesson) => lesson.grade === st.grade)?.id || data.lessons[0]?.id || "L1");
-          setRole("parent");
-          notify("تم الدخول إلى بوابة ولي الأمر بنجاح");
-        } else if (selectedRole === "teacher") {
-          if (idClean === "TCH-01" && secClean === "1111") {
-            setRole("teacher");
-            notify("مرحباً بك في بوابة المعلم");
-          } else {
-            setLoginError("تعذر تسجيل الدخول. تحقق من البيانات وحاول مجدداً.");
-          }
-        } else if (selectedRole === "admin") {
-          if (idClean === "ADM-01" && secClean === "0000") {
-            setRole("admin");
-            notify("تم تسجيل الدخول بصلاحية المشرف العام");
-          } else {
-            setLoginError("تعذر تسجيل الدخول. تحقق من البيانات وحاول مجدداً.");
-          }
+        const password = String(rawSecret || "");
+        if (!idClean || !password) {
+          setLoginError("أدخل رقم القيد أو الرمز الوظيفي وكلمة المرور المدرسية.");
+          return;
+        }
+        setLoginError("");
+        setCloudStatus("syncing");
+        try {
+          const result = await cloudRequest("/api/auth/login", {
+            method: "POST",
+            token: "",
+            body: { login_id: idClean, role: selectedRole, password }
+          });
+          const session = {
+            token: result.token,
+            user: result.user,
+            must_change_password: Boolean(result.must_change_password)
+          };
+          previousCloudDataRef.current = data;
+          suppressCloudPushRef.current = true;
+          setCloudSession(session);
+          setMustChangePassword(Boolean(result.must_change_password));
+          if (result.user.student_id) setActiveStudentId(result.user.student_id);
+          if (result.user.grade) setTeacherCurriculumGrade(result.user.grade);
+          await pullCloudSnapshot(session);
+          setPreviewMode(false);
+          setRole(result.user.role);
+          setAiOpen(false);
+          setCloudStatus("online");
+          notify(`مرحباً ${result.user.display_name || result.user.login_id}. تم الدخول إلى السحابة.`);
+        } catch (error) {
+          setCloudStatus(navigator.onLine ? "pending" : "offline");
+          setLoginError(error.message || "تعذر الاتصال بخادم المدرسة. يمكنك استخدام المعاينة فقط.");
         }
       };
 
-      const handleSmartLogin = (e) => {
-        e.preventDefault();
+      const handleSmartLogin = (event) => {
+        event.preventDefault();
         loginWithCredentials(loginTab, loginId, loginSecret);
       };
 
       const handleQuickDemoLogin = () => {
-        const credentials = DEMO_CREDENTIALS[loginTab] || DEMO_CREDENTIALS.student;
-        setLoginId(credentials.id);
-        setLoginSecret(credentials.secret);
+        const student = data.students.find((item) => item.id === "ST-101") || data.students[0];
+        localStorage.removeItem(CLOUD_SESSION_KEY);
+        setCloudSession(null);
+        setMustChangePassword(false);
+        setPreviewMode(true);
         setLoginError("");
-        loginWithCredentials(loginTab, credentials.id, credentials.secret);
+        if ((loginTab === "student" || loginTab === "parent") && student) {
+          setActiveStudentId(student.id);
+          setActiveLessonId(data.lessons.find((lesson) => lesson.grade === student.grade)?.id || data.lessons[0]?.id || "L1");
+        }
+        setRole(loginTab);
+        notify("أنت الآن في وضع المعاينة المحلي. التغييرات لن تصل إلى السحابة.");
       };
 
       const handleReadSentence = (sentenceObj, idx) => {
@@ -1803,61 +1810,16 @@
       };
 
       const requestRemoteAssistant = async (question) => {
-        const lessonText = (activeLesson?.sentences || []).map((sentence) => sentence.text).join("\n").slice(0, 2200);
-        const system = [
-          "أنت مساعد نور التعليمي لمدرسة يمنية. أجب بالعربية الواضحة وبأسلوب يناسب الطالب أو ولي الأمر أو المعلم حسب البوابة.",
-          "أجب عن أسئلة المنهج اليمني والأسئلة العامة. في الرياضيات اشرح الخطوات. في النحو اذكر القاعدة والمثال.",
-          "لا تخترع نصوص الكتب أو أرقام الصفحات. إذا لم تتوفر معلومة موثوقة فقل ذلك بوضوح.",
-          "معلومات الدرس المفتوح المتاحة: " + (activeLesson?.title || "لا يوجد درس محدد") + "، المادة: " + (activeLesson?.subject || "غير محددة") + ".",
-          lessonText ? "مقتطف الدرس: " + lessonText : "لا يوجد نص درس مرفق."
-        ].join("\n");
-        const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-        const timer = controller ? window.setTimeout(() => controller.abort(), 15000) : null;
-        try {
-          if (navigator.onLine === false) throw new Error("الجهاز غير متصل بالإنترنت.");
-          const proxyUrl = String(aiSettings.proxyUrl || "").trim();
-          if (proxyUrl) {
-            const response = await fetch(proxyUrl, {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "Accept": "application/json" },
-              body: JSON.stringify({
-                question,
-                system,
-                context: { role, grade: currentStudent?.grade || "", lesson: activeLesson?.title || "", subject: activeLesson?.subject || "" }
-              }),
-              signal: controller?.signal
-            });
-            const payload = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(payload?.error || `Proxy HTTP ${response.status}`);
-            const output = payload.reply || payload.answer || payload.output || payload.choices?.[0]?.message?.content;
-            if (typeof output !== "string" || !output.trim()) throw new Error("لم يرجع الخادم الوسيط رداً نصياً.");
-            return output.trim();
-          }
-
-          // Legacy OpenAI-compatible free endpoint. Best-effort anonymous access only;
-          // if this public route is changed or rate-limited, the caller uses local lessons.
-          const response = await fetch("https://text.pollinations.ai/openai", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Accept": "application/json" },
-            body: JSON.stringify({
-              model: "openai-fast",
-              messages: [
-                { role: "system", content: system },
-                { role: "user", content: String(question).slice(0, 500) }
-              ],
-              temperature: 0.45,
-              max_tokens: 1100
-            }),
-            signal: controller?.signal
-          });
-          const payload = await response.json().catch(() => ({}));
-          if (!response.ok) throw new Error(payload?.error?.message || payload?.error || `Pollinations HTTP ${response.status}`);
-          const output = payload?.choices?.[0]?.message?.content || payload.reply || payload.answer || payload.text;
-          if (typeof output !== "string" || !output.trim()) throw new Error("خدمة الإجابة لم ترجع نصاً.");
-          return output.trim().slice(0, 9000);
-        } finally {
-          if (timer) window.clearTimeout(timer);
+        if (!cloudSession?.token) throw new Error("سجّل الدخول بحساب المدرسة لاستخدام مساعد نور السحابي.");
+        const result = await cloudRequest("/api/assistant", {
+          method: "POST",
+          body: { question: String(question || "").slice(0, 1000) },
+          token: cloudSession.token
+        });
+        if (result.provider === "offline-fallback") {
+          return buildLocalAssistantReply(question) + "\\n\\n" + result.reply;
         }
+        return result.reply;
       };
 
       const sendAiMessage = async (customPrompt) => {
@@ -1866,17 +1828,15 @@
         setAiInput("");
         setAiHistoryByRole((prev) => ({ ...prev, [role]: [...(prev[role] || []), { sender: "user", text: q }] }));
         setAiBusy(true);
-        let reply = "";
+        let answer = "";
         try {
-          reply = await requestRemoteAssistant(q);
+          answer = await requestRemoteAssistant(q);
         } catch (error) {
-          console.warn("تعذر الوصول إلى مساعد نور عبر الإنترنت، تم استخدام المحتوى المحلي.", error);
-          reply = "تعذر الاتصال بخدمة الذكاء الاصطناعي الآن. استخدمت قاعدة الدروس والمعلومات المحفوظة على هذا الجهاز.\n\n" + buildLocalAssistantReply(q);
-        } finally {
-          const answer = reply || buildLocalAssistantReply(q);
-          setAiHistoryByRole((prev) => ({ ...prev, [role]: [...(prev[role] || []), { sender: "ai", text: answer }] }));
-          setAiBusy(false);
+          console.warn("تعذر الوصول إلى مساعد نور السحابي، تم استخدام المحتوى المحلي.", error);
+          answer = "استُخدم محرك المنهج المحلي بسبب تعذر الاتصال بالخدمة السحابية.\\n\\n" + buildLocalAssistantReply(q);
         }
+        setAiHistoryByRole((prev) => ({ ...prev, [role]: [...(prev[role] || []), { sender: "ai", text: answer || buildLocalAssistantReply(q) }] }));
+        setAiBusy(false);
       };
 
       const speakAiReply = (value) => {
