@@ -33,7 +33,7 @@ jobs:
         working-directory: cloud-api
         run: |
           set -euo pipefail
-          npx esbuild src/index.mjs --bundle --platform=node --target=node24 --format=esm --outfile=dist/index.mjs
+          npx esbuild src/index.mjs --bundle --platform=node --target=node24 --format=esm --banner:js='import { createRequire } from "node:module"; const require = createRequire(import.meta.url);' --outfile=dist/index.mjs
           test -s dist/index.mjs
           mkdir -p bundle
           cp dist/index.mjs bundle/index.mjs
