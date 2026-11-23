@@ -1156,7 +1156,7 @@
             setRole(me.user.role);
             if (me.user.student_id) setActiveStudentId(me.user.student_id);
             setMustChangePassword(Boolean(me.user.must_change_password));
-            await pullCloudSnapshot(cloudSession);
+            if (!me.user.must_change_password) await pullCloudSnapshot(cloudSession);
           } catch (error) {
             if (cancelled) return;
             if (error.status === 401) {
@@ -1444,6 +1444,7 @@
           });
           setMustChangePassword(false);
           setCloudSession((previous) => previous ? { ...previous, must_change_password: false } : previous);
+          await pullCloudSnapshot(cloudSession);
           setCurrentPassword(""); setNewPassword(""); setConfirmNewPassword("");
           notify("تم تغيير كلمة المرور. يمكنك استخدام النظام الآن.");
         } catch (error) {
@@ -1699,7 +1700,7 @@
           setMustChangePassword(Boolean(result.must_change_password));
           if (result.user.student_id) setActiveStudentId(result.user.student_id);
           if (result.user.grade) setTeacherCurriculumGrade(result.user.grade);
-          await pullCloudSnapshot(session);
+          if (!result.must_change_password) await pullCloudSnapshot(session);
           setPreviewMode(false);
           setRole(result.user.role);
           setAiOpen(false);
