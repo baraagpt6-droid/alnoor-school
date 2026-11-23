@@ -5,11 +5,13 @@ import { createRealtime, rawSql } from "@neon/realtime/server";
 const ORIGIN = process.env.APP_ORIGIN || "https://baraagpt6-droid.github.io";
 const JWT_SECRET = process.env.SCHOOL_JWT_SECRET;
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  // A dedicated read/write role scoped to the public school schema. The
+  // privileged DATABASE_URL is only a deployment fallback, never shipped.
+  connectionString: process.env.ALNOOR_DATABASE_URL || process.env.DATABASE_URL,
   max: 4,
   idleTimeoutMillis: 20000,
   connectionTimeoutMillis: 12000,
-  ssl: { rejectUnauthorized: false }
+  ssl: { rejectUnauthorized: true }
 });
 pool.on("error", (error) => console.error("Neon pool error", error.message));
 
