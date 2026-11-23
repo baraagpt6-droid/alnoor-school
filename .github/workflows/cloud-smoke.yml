@@ -41,7 +41,7 @@ jobs:
             if [ "$ORIGIN" = "null" ]; then
               echo "$HEADERS" | grep -qi "access-control-allow-origin: null"
             else
-              echo "$HEADERS" | grep -qi "access-control-allow-origin: \\*"
+              echo "$HEADERS" | grep -Fai "access-control-allow-origin: $ORIGIN"
             fi
             echo "CORS passed for Origin: $ORIGIN"
           done
