@@ -1491,7 +1491,7 @@
           const result = await cloudRequest("/api/admin/accounts", {
             method: "POST", body: cloudAccountForm
           });
-          setIssuedCloudAccount(result.account);
+          setIssuedCloudAccount({ ...result.account, password: result.password });
           setCloudAccountForm({role:"teacher",login_id:"",display_name:"",student_id:"",grade:""});
           notify("تم إنشاء الحساب. احفظ كلمة المرور المؤقتة ووزعها لصاحبها.");
         } catch (error) { notify(error.message || "تعذر إنشاء الحساب."); }
