@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - "alnoor-school-release-1.1.2.zip"
+      - "alnoor-school-release-1.1.3.zip"
       - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
@@ -29,8 +29,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo "9feef008917ff29c1c53d846daff11b3448c320e7be09a86635c4db72ae9092d  alnoor-school-release-1.1.2.zip" | sha256sum -c -
-          unzip -t alnoor-school-release-1.1.2.zip
+          echo "e436b83d0d0e6963b29ef95dd1e1398def1ce51ff04aeed6bfb38326ee4f6814  alnoor-school-release-1.1.3.zip" | sha256sum -c -
+          unzip -t alnoor-school-release-1.1.3.zip
 
       - name: Assemble site
         shell: bash
@@ -38,14 +38,14 @@ jobs:
           set -euo pipefail
           rm -rf site
           mkdir -p site
-          unzip -q alnoor-school-release-1.1.2.zip -d site
+          unzip -q alnoor-school-release-1.1.3.zip -d site
           rm -rf site/.github
           test -s site/index.html
           test -s site/styles.fixed.css
           test -s site/manifest.json
           test -s site/sw.js
-          grep -q 'const APP_VERSION = "1.1.2";' site/index.html
-          grep -q 'alnoor-school-v1.1.2' site/sw.js
+          grep -q 'const APP_VERSION = "1.1.3";' site/index.html
+          grep -q 'alnoor-school-v1.1.3' site/sw.js
 
       - name: Stamp app and cache version from this commit
         shell: bash
@@ -54,7 +54,7 @@ jobs:
           from pathlib import Path
           import os, re
           build_id = os.environ["GITHUB_SHA"][:7]
-          version = f"1.1.2+{build_id}"
+          version = f"1.1.3+{build_id}"
           html = Path("site/index.html")
           source = html.read_text(encoding="utf-8")
           source, count = re.subn(r'const APP_VERSION = "[^"]+";', f'const APP_VERSION = "{version}";', source, count=1)
