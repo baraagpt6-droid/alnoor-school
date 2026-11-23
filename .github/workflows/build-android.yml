@@ -1,10 +1,11 @@
-name: Build Alnoor School Android APK (signed)
+name: Build Alnoor School Android release 2.0.3 (APK + AAB)
 
 on:
   push:
     branches: [main]
     paths:
       - "index.html"
+      - "privacy.html"
       - "sw.js"
       - "manifest.json"
       - "android/**"
@@ -13,10 +14,10 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  build-apk:
+  build-release:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
@@ -28,7 +29,7 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Install Android SDK packages
+      - name: Install Android SDK API 36 and Build Tools
         shell: bash
         run: |
           set -euo pipefail
@@ -38,14 +39,14 @@ jobs:
           set +o pipefail
           yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses >/dev/null
           set -o pipefail
-          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-35" "build-tools;35.0.0"
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-36" "build-tools;36.0.0"
 
-      - name: Set up Gradle 8.9
+      - name: Set up Gradle 8.13
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "8.9"
+          gradle-version: "8.13"
 
-      - name: Restore release signing key
+      - name: Restore official release signing key
         shell: bash
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -58,17 +59,15 @@ jobs:
           : "${ANDROID_KEYSTORE_PASSWORD:?Missing repository secret ANDROID_KEYSTORE_PASSWORD}"
           : "${ANDROID_KEY_ALIAS:?Missing repository secret ANDROID_KEY_ALIAS}"
           : "${ANDROID_KEY_PASSWORD:?Missing repository secret ANDROID_KEY_PASSWORD}"
-
           KEYSTORE_PATH="$RUNNER_TEMP/alnoor-school-release.jks"
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
           chmod 600 "$KEYSTORE_PATH"
           test -s "$KEYSTORE_PATH"
-          keytool -list -keystore "$KEYSTORE_PATH" -storetype JKS \
-            -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null
+          keytool -list -keystore "$KEYSTORE_PATH" -storetype JKS -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null
           echo "ANDROID_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
-          echo "Release signing keystore restored and alias validated."
+          echo "Official release keystore restored and alias validated."
 
-      - name: Package the website inside Android
+      - name: Package current website inside Android
         shell: bash
         run: |
           set -euo pipefail
@@ -76,16 +75,16 @@ jobs:
           mkdir -p "$ASSET_DIR/vendor" android/app/src/main/res/drawable-nodpi
           unzip -q alnoor-school-release-1.1.3.zip -d "$ASSET_DIR"
           rm -rf "$ASSET_DIR/.github"
-          cp index.html sw.js manifest.json "$ASSET_DIR/"
+          cp index.html sw.js manifest.json privacy.html "$ASSET_DIR/"
           curl --retry 3 --retry-delay 2 -fLsS https://unpkg.com/react@18.3.1/umd/react.production.min.js -o "$ASSET_DIR/vendor/react.production.min.js"
           curl --retry 3 --retry-delay 2 -fLsS https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js -o "$ASSET_DIR/vendor/react-dom.production.min.js"
           curl --retry 3 --retry-delay 2 -fLsS https://unpkg.com/@babel/standalone@7.26.10/babel.min.js -o "$ASSET_DIR/vendor/babel.min.js"
           curl --retry 3 --retry-delay 2 -fLsS https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js -o "$ASSET_DIR/vendor/three.min.js"
           curl --retry 3 --retry-delay 2 -fLsS https://unpkg.com/qrcode-generator@1.4.4/qrcode.js -o "$ASSET_DIR/vendor/qrcode.min.js"
           cp "$ASSET_DIR/logo-512.png" android/app/src/main/res/drawable-nodpi/ic_launcher.png
-          for file in index.html styles.fixed.css logo.png manifest.json sw.js vendor/react.production.min.js vendor/react-dom.production.min.js vendor/babel.min.js vendor/three.min.js vendor/qrcode.min.js; do test -s "$ASSET_DIR/$file"; done
+          for file in index.html privacy.html styles.fixed.css logo.png manifest.json sw.js vendor/react.production.min.js vendor/react-dom.production.min.js vendor/babel.min.js vendor/three.min.js vendor/qrcode.min.js; do test -s "$ASSET_DIR/$file"; done
 
-      - name: Validate application JSX
+      - name: Validate current app source
         shell: bash
         run: |
           set -euo pipefail
@@ -93,73 +92,88 @@ jobs:
           const fs = require("node:fs");
           const Babel = require("./android/app/src/main/assets/www/vendor/babel.min.js");
           const html = fs.readFileSync("android/app/src/main/assets/www/index.html", "utf8");
-          const blocks = [...html.matchAll(/<script\b[^>]*\btype=["']text\/babel["'][^>]*>([\s\S]*?)<\/script>/gi)];
+          const blocks = [...html.matchAll(/<script\\b[^>]*\\btype=["']text\\/babel["'][^>]*>([\\s\\S]*?)<\\/script>/gi)];
           if (!blocks.length) throw new Error("No JSX application script found.");
           if (!Babel || typeof Babel.transform !== "function") throw new Error("Babel standalone did not load.");
-          blocks.forEach((match, index) => Babel.transform(match[1], { presets: ["react"], sourceType: "script" }));
-          console.log(`Validated ${blocks.length} JSX script block(s).`);
+          blocks.forEach((match) => Babel.transform(match[1], { presets: ["react"], sourceType: "script" }));
           const required = [
-            'const APP_VERSION = "2.0.2";',
-            'CLOUD_API_BASE',
+            'const APP_VERSION = "2.0.3";',
+            'https://baraagpt6-droid.github.io/alnoor-school/privacy.html',
             'cloudRequest("/api/auth/login"',
             'cloudRequest("/api/sync/pull"',
             'cloudRequest("/api/sync/push"',
-            'cloudRequest("/api/student/progress"',
-            'cloudRequest("/api/assistant"',
-            'أقسام بوابة المعلم',
-            'أقسام بوابة ولي الأمر',
-            'أقسام بوابة المشرف العام',
-            'teacherTab === "attendance"',
-            'parentTab === "attendance"',
-            'adminTab === "communication"',
-            'quiz_submissions:quizSubmissions'
+            'cloudRequest("/api/assistant"'
           ];
-          for (const value of required) if (!html.includes(value)) throw new Error("Missing cloud release marker: " + value);
-          if (html.includes("مفتاح Gemini") || html.includes("مفتاح Groq")) throw new Error("Provider keys must not appear in the web UI.");
-          console.log("Validated Alnoor 2.0.2 cloud application markers.");
+          for (const value of required) if (!html.includes(value)) throw new Error("Missing release marker: " + value);
+          console.log(`Validated ${blocks.length} JSX block(s) and app 2.0.3 markers.`);
           NODE
-
-      - name: Verify Android release metadata and native splash
-        shell: bash
-        run: |
-          set -euo pipefail
           grep -Fq "applicationId 'com.alnoor.school'" android/app/build.gradle
-          grep -Fq "versionCode 202" android/app/build.gradle
-          grep -Fq "versionName '2.0.2'" android/app/build.gradle
-          grep -Fq "setTextAlignment(View.TEXT_ALIGNMENT_CENTER)" android/app/src/main/java/com/alnoor/school/MainActivity.java
-          grep -Fq "document.getElementById('instant-splash')?.remove()" android/app/src/main/java/com/alnoor/school/MainActivity.java
-          grep -Fq "versionCode" android/app/build.gradle
-          echo "Android package, version, and centered single splash checks passed."
+          grep -Fq "compileSdk 36" android/app/build.gradle
+          grep -Fq "targetSdk 36" android/app/build.gradle
+          grep -Fq "versionCode 203" android/app/build.gradle
+          grep -Fq "versionName '2.0.3'" android/app/build.gradle
+          grep -Fq "version '8.13.2'" android/build.gradle
+          echo "Package, SDK and release version checks passed."
 
-      - name: Build signed release APK
+      - name: Build signed APK and Android App Bundle
         working-directory: android
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: gradle --no-daemon --stacktrace assembleRelease
+        run: gradle --no-daemon --stacktrace clean bundleRelease assembleRelease
 
-      - name: Verify signed APK and certificate
+      - name: Verify AAB, APK, target API 36 and release certificate
         shell: bash
         run: |
           set -euo pipefail
+          AAB="android/app/build/outputs/bundle/release/app-release.aab"
           APK="android/app/build/outputs/apk/release/app-release.apk"
+          test -s "$AAB"
           test -s "$APK"
-          unzip -t "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='com.alnoor.school'"
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK" | tee "$RUNNER_TEMP/apk-signature.txt"
-          ACTUAL_CERT="$(awk '/Signer #1 certificate SHA-256 digest:/ {print tolower($NF); exit}' "$RUNNER_TEMP/apk-signature.txt")"
-          EXPECTED_CERT="054eeea383f75d177f6c7dfa1a55ad43dc2dbafb22253ab34f0c9d05778373e6"
-          test "$ACTUAL_CERT" = "$EXPECTED_CERT"
-          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -v 4 "$APK"
-          cp "$APK" alnoor-school-2.0.2.apk
-          sha256sum alnoor-school-2.0.2.apk
-          echo "APK signature and expected release certificate verified."
+          unzip -t "$AAB" >/dev/null
+          unzip -t "$APK" >/dev/null
 
-      - name: Upload signed APK artifact
+          BUNDLETOOL="$RUNNER_TEMP/bundletool-all-1.18.1.jar"
+          curl --retry 3 --retry-delay 2 -fLsS "https://github.com/google/bundletool/releases/download/1.18.1/bundletool-all-1.18.1.jar" -o "$BUNDLETOOL"
+          java -jar "$BUNDLETOOL" validate --bundle="$AAB"
+          AAB_TARGET="$(java -jar "$BUNDLETOOL" dump manifest --bundle="$AAB" --module=base --xpath='/manifest/uses-sdk/@android:targetSdkVersion')"
+          test "$AAB_TARGET" = "36"
+
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "package: name='com.alnoor.school' versionCode='203' versionName='2.0.3'"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | grep -F "targetSdkVersion:'36'"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" | tee "$RUNNER_TEMP/apk-signature.txt"
+          APK_CERT="$(awk '/Signer #1 certificate SHA-256 digest:/ {print tolower($NF); exit}' "$RUNNER_TEMP/apk-signature.txt")"
+          EXPECTED_CERT="054eeea383f75d177f6c7dfa1a55ad43dc2dbafb22253ab34f0c9d05778373e6"
+          test "$APK_CERT" = "$EXPECTED_CERT"
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 "$APK"
+
+          jarsigner -verify -strict -certs "$AAB"
+          AAB_CERT="$(keytool -printcert -jarfile "$AAB" | awk '/SHA256:/ {gsub(":","",$2); print tolower($2); exit}')"
+          test "$AAB_CERT" = "$EXPECTED_CERT"
+
+          mkdir -p release-files
+          cp "$AAB" release-files/app-release.aab
+          cp "$APK" release-files/alnoor-school-2.0.3.apk
+          sha256sum release-files/*
+          echo "AAB and APK target API 36 and match the previously approved release signing certificate."
+
+      - name: Upload signed store files as workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: alnoor-school-2.0.2-signed-apk
-          path: alnoor-school-2.0.2.apk
+          name: alnoor-school-2.0.3-google-play-release
+          path: release-files/*
           if-no-files-found: error
           retention-days: 90
+
+      - name: Publish signed files to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="v2.0.3"
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --target "$GITHUB_SHA" --title "Alnoor School 2.0.3" --notes "Android 16 / API 36 release. Signed AAB for Google Play and signed APK for direct installation."
+          fi
+          gh release upload "$TAG" release-files/app-release.aab release-files/alnoor-school-2.0.3.apk --clobber

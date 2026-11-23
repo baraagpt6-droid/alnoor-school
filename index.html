@@ -733,7 +733,7 @@
     ========================================================================= */
     const STORAGE_KEY = "alnoor_madrasti_v3_full";
     const AI_SETTINGS_KEY = "alnoor_ai_preferences_v1";
-    const APP_VERSION = "2.0.2";
+    const APP_VERSION = "2.0.3";
     const CLOUD_API_BASE = "https://br-falling-rain-azmx7t48-schoolapi.compute.c-3.ap-southeast-1.aws.neon.tech";
     const CLOUD_REALTIME_URL = "https://ep-nameless-lake-azw1q6rt.rt.c-3.ap-southeast-1.aws.neon.tech/";
     const CLOUD_SESSION_KEY = "alnoor_cloud_session_v2";
@@ -2131,6 +2131,9 @@
                     </div>
                   </details>
                 </section>
+                <p className="text-center text-xs font-bold text-[var(--muted)]">
+                  <a href="https://baraagpt6-droid.github.io/alnoor-school/privacy.html" className="underline underline-offset-4" rel="noopener noreferrer">سياسة الخصوصية | Privacy Policy</a>
+                </p>
               </form>
             </div>
           </div>
@@ -2654,6 +2657,11 @@
                       >
                         {speechEnabled ? "مفعّل" : "متوقف"}
                       </button>
+                    </div>
+                    <div className="rounded-xl border border-[var(--line)] bg-[var(--surface2)] p-3 text-xs font-bold leading-6">
+                      <div className="font-black text-[var(--ink)]">الخصوصية وبياناتك</div>
+                      <p className="mt-1 text-[var(--muted)]">اطّلع على البيانات التي يستخدمها التطبيق وكيفية طلب تصحيحها أو حذفها.</p>
+                      <a href="https://baraagpt6-droid.github.io/alnoor-school/privacy.html" className="mt-2 inline-block underline underline-offset-4 text-[#E8C84A]" rel="noopener noreferrer">سياسة الخصوصية وحقوق المستخدم | Privacy Policy</a>
                     </div>
                   </div>
                 )}
