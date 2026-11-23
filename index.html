@@ -1392,13 +1392,13 @@
         suppressCloudPushRef.current = true;
         setData((previous) => ({
           ...previous,
-          students: Array.isArray(snapshot.students) && snapshot.students.length ? snapshot.students : previous.students,
-          assignments: Array.isArray(snapshot.assignments) && snapshot.assignments.length ? snapshot.assignments : previous.assignments,
-          announcements: Array.isArray(snapshot.announcements) && snapshot.announcements.length ? snapshot.announcements : previous.announcements,
-          parentMessages: Array.isArray(snapshot.parentMessages) && snapshot.parentMessages.length ? snapshot.parentMessages : previous.parentMessages,
-          scheduleByGrade: snapshot.scheduleByGrade && Object.keys(snapshot.scheduleByGrade).length ? snapshot.scheduleByGrade : previous.scheduleByGrade,
-          attendanceRecords: Array.isArray(snapshot.attendanceRecords) && snapshot.attendanceRecords.length ? snapshot.attendanceRecords : previous.attendanceRecords,
-          lessons: Array.isArray(snapshot.lessons) && snapshot.lessons.length ? snapshot.lessons : previous.lessons
+          students: Array.isArray(snapshot.students) ? snapshot.students : previous.students,
+          assignments: Array.isArray(snapshot.assignments) ? snapshot.assignments : previous.assignments,
+          announcements: Array.isArray(snapshot.announcements) ? snapshot.announcements : previous.announcements,
+          parentMessages: Array.isArray(snapshot.parentMessages) ? snapshot.parentMessages : previous.parentMessages,
+          scheduleByGrade: snapshot.scheduleByGrade && typeof snapshot.scheduleByGrade === "object" ? snapshot.scheduleByGrade : previous.scheduleByGrade,
+          attendanceRecords: Array.isArray(snapshot.attendanceRecords) ? snapshot.attendanceRecords : previous.attendanceRecords,
+          lessons: Array.isArray(snapshot.lessons) ? snapshot.lessons : previous.lessons
         }));
         setCloudLastSync(new Date().toLocaleTimeString("ar"));
         setCloudStatus("online");
