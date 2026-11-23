@@ -48,7 +48,7 @@ jobs:
           const fs = require("node:fs");
           const Babel = require("./.validation/vendor/babel.min.js");
           const html = fs.readFileSync("index.html", "utf8");
-          const blocks = [...html.matchAll(/<script\\b[^>]*\\btype=["']text\\/babel["'][^>]*>([\\s\\S]*?)<\\/script>/gi)];
+          const blocks = [...html.matchAll(/<script\b[^>]*\btype=["']text\/babel["'][^>]*>([\s\S]*?)<\/script>/gi)];
           if (!blocks.length) throw new Error("No JSX application script found.");
           blocks.forEach((match) => Babel.transform(match[1], { presets: ["react"], sourceType: "script" }));
           const required = [
