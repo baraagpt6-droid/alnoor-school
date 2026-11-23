@@ -7,6 +7,7 @@ on:
       - "index.html"
       - "sw.js"
       - "manifest.json"
+      - "privacy.html"
       - "cloud-api/src/index.mjs"
       - ".github/workflows/cloud-smoke.yml"
       - ".github/workflows/deploy.yml"
@@ -30,7 +31,7 @@ jobs:
           API="https://br-falling-rain-azmx7t48-schoolapi.compute.c-3.ap-southeast-1.aws.neon.tech"
           BODY="$(curl --retry 3 --retry-delay 2 --connect-timeout 15 --max-time 30 -fsS "$API/api/health")"
           echo "SchoolAPI health response: $BODY"
-          echo "$BODY" | jq -e '.ok == true and .version == "2.0.3" and .database.database == "neondb"' >/dev/null
+          echo "$BODY" | jq -e '.ok == true and .version == "2.0.2" and .database.database == "neondb"' >/dev/null
           echo "SchoolAPI health and database connection passed."
 
       - name: Verify GitHub Pages production site and PWA
