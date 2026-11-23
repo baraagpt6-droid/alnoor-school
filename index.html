@@ -269,6 +269,7 @@
     /* Alnoor School 1.3.0 — role portal layout */
     .other-portal-root { padding-bottom:calc(112px + env(safe-area-inset-bottom)) !important; }
     .teacher-portal-root,.parent-portal-root,.admin-portal-root { min-width:0; }
+    .admin-portal-root { padding-bottom:110px !important; }
     .portal-tabs {
       display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:5px;
       padding:5px; border:1px solid var(--line); border-radius:17px;
@@ -732,15 +733,16 @@
     ========================================================================= */
     const STORAGE_KEY = "alnoor_madrasti_v3_full";
     const AI_SETTINGS_KEY = "alnoor_ai_preferences_v1";
-    const APP_VERSION = "2.0.0";
+    const APP_VERSION = "2.0.1";
     const CLOUD_API_BASE = "https://br-falling-rain-azmx7t48-schoolapi.compute.c-3.ap-southeast-1.aws.neon.tech";
     const CLOUD_REALTIME_URL = "https://ep-nameless-lake-azw1q6rt.rt.c-3.ap-southeast-1.aws.neon.tech/";
     const CLOUD_SESSION_KEY = "alnoor_cloud_session_v2";
+    // Public preview accounts. Use only with the synthetic school data in this demo database.
     const DEMO_CREDENTIALS = Object.freeze({
-      student: Object.freeze({ id: "ST-101", secret: "1234" }),
-      parent: Object.freeze({ id: "ST-101", secret: "771001100" }),
-      teacher: Object.freeze({ id: "TCH-01", secret: "1111" }),
-      admin: Object.freeze({ id: "ADM-01", secret: "0000" })
+      admin: Object.freeze({ id: "ADM-0001", secret: "Alnoor-Admin-Preview-26!" }),
+      teacher: Object.freeze({ id: "TCH-01", secret: "Alnoor-Teacher-Preview-26!" }),
+      student: Object.freeze({ id: "ST-101", secret: "Alnoor-Student-Preview-26!" }),
+      parent: Object.freeze({ id: "ST-101", secret: "Alnoor-Parent-Preview-26!" })
     });
     const CURRICULUM_BOOKS_URL = "https://meoh.gov.ye/services/subjects/";
     const MINISTRY_ELEARNING_URL = "https://e-learning-moe.edu.ye/book.php";
@@ -1146,7 +1148,7 @@
 
       // Restore a valid cloud session, then hydrate the local offline-first cache.
       useEffect(() => {
-        if (!cloudSession?.token) { if (cloudStatus === "checking") setCloudStatus("offline"); return; }
+        if (!cloudSession?.token) return;
         let cancelled = false;
         (async () => {
           try {
@@ -1240,9 +1242,16 @@
 
       useEffect(() => {
         const onOnline = () => {
-          setCloudStatus(cloudSession?.token ? "syncing" : "online");
           setCloudRetry((value) => value + 1);
-          if (cloudSession?.token) pullCloudSnapshot(cloudSession).catch(() => {});
+          if (cloudSession?.token) {
+            setCloudStatus("syncing");
+            pullCloudSnapshot(cloudSession).catch(() => {});
+          } else {
+            setCloudStatus("checking");
+            cloudRequest("/api/health")
+              .then((health) => setCloudStatus(health?.ok ? "online" : "pending"))
+              .catch(() => setCloudStatus(navigator.onLine ? "pending" : "offline"));
+          }
         };
         const onOffline = () => setCloudStatus("offline");
         window.addEventListener("online", onOnline);
@@ -1375,7 +1384,8 @@
           method: options.method || "GET",
           headers,
           body: options.body === undefined ? undefined : JSON.stringify(options.body),
-          cache: "no-store"
+          cache: "no-store",
+          signal: options.signal
         });
         const result = await response.json().catch(() => ({}));
         if (!response.ok) {
@@ -1386,6 +1396,27 @@
         }
         return result;
       };
+
+      // The login screen must show the real server state even before a user signs in.
+      useEffect(() => {
+        let cancelled = false;
+        const checkServer = async () => {
+          if (!navigator.onLine) {
+            setCloudStatus("offline");
+            return;
+          }
+          setCloudStatus("checking");
+          try {
+            const health = await cloudRequest("/api/health");
+            if (!cancelled) setCloudStatus(health?.ok ? "online" : "pending");
+          } catch (error) {
+            if (!cancelled) setCloudStatus(navigator.onLine ? "pending" : "offline");
+            console.warn("Alnoor cloud health check failed.", error);
+          }
+        };
+        checkServer();
+        return () => { cancelled = true; };
+      }, []);
 
       const applyCloudSnapshot = (snapshot) => {
         if (!snapshot || typeof snapshot !== "object") return;
@@ -1737,19 +1768,14 @@
         loginWithCredentials(loginTab, loginId, loginSecret);
       };
 
-      const handleQuickDemoLogin = () => {
-        const student = data.students.find((item) => item.id === "ST-101") || data.students[0];
-        localStorage.removeItem(CLOUD_SESSION_KEY);
-        setCloudSession(null);
-        setMustChangePassword(false);
-        setPreviewMode(true);
+      const handleQuickDemoLogin = (targetRole) => {
+        const credentials = DEMO_CREDENTIALS[targetRole];
+        if (!credentials) return;
+        setLoginTab(targetRole);
+        setLoginId(credentials.id);
+        setLoginSecret(credentials.secret);
         setLoginError("");
-        if ((loginTab === "student" || loginTab === "parent") && student) {
-          setActiveStudentId(student.id);
-          setActiveLessonId(data.lessons.find((lesson) => lesson.grade === student.grade)?.id || data.lessons[0]?.id || "L1");
-        }
-        setRole(loginTab);
-        notify("أنت الآن في وضع المعاينة المحلي. التغييرات لن تصل إلى السحابة.");
+        loginWithCredentials(targetRole, credentials.id, credentials.secret);
       };
 
       const handleReadSentence = (sentenceObj, idx) => {
@@ -1869,7 +1895,7 @@
           token: cloudSession.token
         });
         if (result.provider === "offline-fallback") {
-          return buildLocalAssistantReply(question) + "\\n\\n" + result.reply;
+          return buildLocalAssistantReply(question) + "\n\n" + result.reply;
         }
         return result.reply;
       };
@@ -1885,7 +1911,7 @@
           answer = await requestRemoteAssistant(q);
         } catch (error) {
           console.warn("تعذر الوصول إلى مساعد نور السحابي، تم استخدام المحتوى المحلي.", error);
-          answer = "استُخدم محرك المنهج المحلي بسبب تعذر الاتصال بالخدمة السحابية.\\n\\n" + buildLocalAssistantReply(q);
+          answer = "استُخدم محرك المنهج المحلي بسبب تعذر الاتصال بالخدمة السحابية.\n\n" + buildLocalAssistantReply(q);
         }
         setAiHistoryByRole((prev) => ({ ...prev, [role]: [...(prev[role] || []), { sender: "ai", text: answer || buildLocalAssistantReply(q) }] }));
         setAiBusy(false);
@@ -1986,7 +2012,7 @@
               <div className="flex items-center justify-between gap-2 rounded-xl p-3 bg-[var(--surface2)] text-xs font-bold" role="status">
                 <span>حالة خادم المدرسة</span>
                 <span className={`font-black ${cloudStatus === "online" ? "text-emerald-600" : cloudStatus === "offline" ? "text-amber-600" : "text-[var(--muted)]"}`}>
-                  {cloudStatus === "online" ? "متصل" : cloudStatus === "syncing" ? "يجري الاتصال" : cloudStatus === "pending" ? "مزامنة معلّقة" : cloudStatus === "expired" ? "انتهت الجلسة" : cloudStatus === "offline" ? "دون إنترنت" : "فحص الاتصال"}
+                  {cloudStatus === "online" ? "متصل بالسحابة" : cloudStatus === "syncing" ? "يجري الاتصال" : cloudStatus === "pending" ? "الخادم غير متاح" : cloudStatus === "expired" ? "انتهت الجلسة" : cloudStatus === "offline" ? "دون إنترنت" : "فحص الاتصال"}
                 </span>
               </div>
 
@@ -2070,17 +2096,41 @@
                   <SmartGlyph name="lock" size={18} color="#2A2118" />
                   <span>تسجيل الدخول إلى {portalRoles.find((r) => r.id === loginTab)?.label}</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={handleQuickDemoLogin}
-                  className="btn btn-olive w-full flex items-center justify-center gap-2 text-sm sm:text-base"
-                >
-                  <SmartGlyph name="star" size={17} />
-                  <span>دخول تجريبي سريع بضغطة واحدة</span>
-                </button>
-                <p className="text-center text-[11px] font-bold text-[var(--muted)]">
-                  الحسابات المدرسية تصدرها الإدارة. زر المعاينة لا يتصل بالسحابة ولا يغيّر سجلاتها.
-                </p>
+                <section className="rounded-2xl border border-[var(--gold)]/50 bg-[var(--surface2)] p-3 space-y-3">
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-black text-[var(--ink)]">دخول تجريبي سريع للمعاينة</h3>
+                    <p className="text-[11px] leading-5 font-bold text-[var(--muted)]">هذه حسابات سحابية لبيانات وهمية. اختر الدور للدخول مباشرة، أو افتح بيانات الدخول لاستخدامها يدوياً. لا تُدخل بيانات طلاب حقيقية في حسابات المعاينة المشتركة.</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { role: "admin", label: "دخول كمشرف" },
+                      { role: "teacher", label: "دخول كمعلم" },
+                      { role: "student", label: "دخول كطالب" },
+                      { role: "parent", label: "دخول كولي أمر" }
+                    ].map((item) => (
+                      <button key={item.role} type="button" onClick={() => handleQuickDemoLogin(item.role)} className="btn btn-olive w-full text-xs sm:text-sm">
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                  <details className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
+                    <summary className="cursor-pointer text-xs font-black text-[var(--ink)]">بيانات الدخول اليدوية</summary>
+                    <div className="mt-3 grid grid-cols-1 gap-2 text-xs">
+                      {[
+                        { role: "admin", label: "المشرف العام" },
+                        { role: "teacher", label: "المعلم" },
+                        { role: "student", label: "الطالب" },
+                        { role: "parent", label: "ولي الأمر" }
+                      ].map((item) => (
+                        <div key={item.role} className="rounded-lg border border-[var(--line)] p-2 space-y-1">
+                          <strong>{item.label}</strong>
+                          <div>المعرّف: <bdi dir="ltr">{DEMO_CREDENTIALS[item.role].id}</bdi></div>
+                          <div>كلمة المرور: <code className="select-all">{DEMO_CREDENTIALS[item.role].secret}</code></div>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                </section>
               </form>
             </div>
           </div>
@@ -3360,7 +3410,7 @@
                       key={index}
                       className={`ai-message ${message.sender === "ai" ? "ai-message-assistant" : "ai-message-user"}`}
                     >
-                      <p>{message.text}</p>
+                      <p>{message.sender === "ai" ? String(message.text || "").replace(/\\n/g, "\n") : message.text}</p>
                       {message.sender === "ai" && (
                         <button type="button" className="ai-read-button" onClick={() => speakAiReply(message.text)}>
                           قراءة الرد صوتياً

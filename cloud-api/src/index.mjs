@@ -3,6 +3,20 @@ import { createHash, createHmac, timingSafeEqual, randomBytes } from "node:crypt
 import { createRealtime, rawSql } from "@neon/realtime/server";
 
 const ORIGIN = process.env.APP_ORIGIN || "https://baraagpt6-droid.github.io";
+const ALLOWED_ORIGINS = new Set([
+  ORIGIN,
+  "https://baraagpt6-droid.github.io",
+  "http://localhost",
+  "https://localhost",
+  "capacitor://localhost",
+  "ionic://localhost",
+  "http://localhost:5173",
+  "http://localhost:8080",
+  "http://127.0.0.1",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:8080",
+  ...String(process.env.CORS_ALLOWED_ORIGINS || "").split(",").map((value) => value.trim()).filter(Boolean)
+]);
 const JWT_SECRET = process.env.SCHOOL_JWT_SECRET;
 const pool = new Pool({
   // A dedicated read/write role scoped to the public school schema. The
@@ -21,7 +35,12 @@ const realtime = process.env.NEON_REALTIME_SECRET
 
 function headers(request) {
   const origin = request.headers.get("origin");
-  const allow = !origin || origin === ORIGIN || origin === "null" ? (origin || ORIGIN) : ORIGIN;
+  // Android file:// WebViews send Origin: null. A wildcard is safe here because
+  // this API uses explicit Bearer tokens and does not enable credential cookies.
+  const allow = !origin ? ORIGIN
+    : origin === "null" ? "*"
+    : ALLOWED_ORIGINS.has(origin) ? origin
+    : "null";
   return {
     "content-type": "application/json; charset=utf-8",
     "cache-control": "no-store",
@@ -720,7 +739,7 @@ export default {
     try {
       if (request.method === "GET" && (path === "/" || path === "/health" || path === "/api/health")) {
         const result = await pool.query("SELECT current_database() AS database, now() AS server_time, 1 AS healthy");
-        return send(request, { ok: true, service: "alnoor-school-api", version: "2.0.0", database: result.rows[0] });
+        return send(request, { ok: true, service: "alnoor-school-api", version: "2.0.1", database: result.rows[0] });
       }
       if (request.method === "POST" && path === "/api/bootstrap/initial-admin") {
         return send(request, await bootstrapInitialAdmin(await readBody(request)));
