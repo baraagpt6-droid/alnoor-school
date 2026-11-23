@@ -1909,6 +1909,9 @@
       };
 
       const requestRemoteAssistant = async (question) => {
+        // Student prompts, identifiers and profile context must remain on-device.
+        // The local curriculum engine uses the lessons already synced to this device.
+        if (role === "student") return buildLocalAssistantReply(question);
         if (!cloudSession?.token) throw new Error("سجّل الدخول بحساب المدرسة لاستخدام مساعد نور السحابي.");
         const result = await cloudRequest("/api/assistant", {
           method: "POST",
