@@ -2712,7 +2712,21 @@
             )}
 
             {role === "admin" && (
-              <div className="space-y-4">
+              <div className="space-y-4 admin-portal-root">
+                <nav className="portal-tabs" role="tablist" aria-label="أقسام بوابة المشرف العام">
+                  {[
+                    { id: "overview", label: "الإحصائيات العامة" },
+                    { id: "students", label: "الطلاب والتسجيل" },
+                    { id: "classes", label: "الصفوف والجداول" },
+                    { id: "communication", label: "الإعلانات والرسائل" }
+                  ].map((tab) => (
+                    <button key={tab.id} type="button" role="tab" aria-selected={adminTab === tab.id} onClick={() => setAdminTab(tab.id)}>{tab.label}</button>
+                  ))}
+                </nav>
+
+                {adminTab === "overview" && (
+                  <div className="space-y-3">
+                    
                 <div className="grid grid-cols-3 gap-2.5">
                   <div className="card p-3 text-center">
                     <div className="text-xl font-black text-[#E8C84A]">{data.students.length}</div>
@@ -2727,8 +2741,20 @@
                     <div className="text-xs font-bold text-[var(--muted)]">رسائل الأولياء</div>
                   </div>
                 </div>
+                    <section className="card p-4 space-y-2">
+                      <h3 className="text-sm font-black text-[#E8C84A]">تقارير المدرسة</h3>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button type="button" className="btn btn-gold text-xs" onClick={exportSchoolReport}>تصدير CSV</button>
+                        <button type="button" className="btn btn-olive text-xs" onClick={() => window.print()}>طباعة / PDF</button>
+                      </div>
+                      <p className="source-note">يحتوي التقرير على الأسماء والصفوف والحضور والمعدل الموجود على هذا الجهاز فقط.</p>
+                    </section>
+                  </div>
+                )}
 
-                {/* إضافة طالب جديد */}
+                {adminTab === "students" && (
+                  <div className="space-y-3">
+                                    {/* إضافة طالب جديد */}
                 <div className="card p-4 space-y-3">
                   <h3 className="text-sm font-black text-[#E8C84A]">تسجيل طالب جديد في المنظومة</h3>
                   <div className="space-y-2">
@@ -2784,8 +2810,22 @@
                     </button>
                   </div>
                 </div>
+                    <section className="card p-4 space-y-3">
+                      <h3 className="text-sm font-black text-[#E8C84A]">البحث في سجل الطلاب</h3>
+                      <input type="search" maxLength={100} className="input text-sm" placeholder="ابحث بالاسم أو رقم القيد أو الصف..." value={adminStudentSearch} onChange={(event) => setAdminStudentSearch(event.target.value)} />
+                      {(data.students || []).filter((student) => [student.name, student.id, student.grade].join(" ").toLocaleLowerCase("ar").includes(adminStudentSearch.trim().toLocaleLowerCase("ar"))).map((student) => (
+                        <button type="button" key={student.id} onClick={() => setActiveStudentId(student.id)} className={`w-full flex items-center justify-between gap-2 rounded-xl bg-[var(--surface2)] p-3 text-start ${activeStudentId === student.id ? "border border-[var(--gold)]" : ""}`}>
+                          <span className="min-w-0"><strong className="block text-xs">{student.name}</strong><span className="text-[10px] text-[var(--muted)]">{student.id} • {student.grade}</span></span>
+                          <span className="text-xs font-black">{getStudentAverage(student)}%</span>
+                        </button>
+                      ))}
+                    </section>
+                  </div>
+                )}
 
-                <div className="card p-4 space-y-3">
+                {adminTab === "classes" && (
+                  <div className="space-y-3">
+                                    <div className="card p-4 space-y-3">
                   <h3 className="text-sm font-black text-[#E8C84A]">توزيع الطلاب على الصفوف (تجريبي)</h3>
                   {data.students.map((student) => <div key={student.id} className="flex items-center justify-between gap-2 p-2 rounded-xl bg-[var(--surface2)]">
                     <span className="text-xs font-bold min-w-0 truncate">{student.name}</span>
@@ -2797,8 +2837,12 @@
                     </select>
                   </div>)}
                 </div>
+                  </div>
+                )}
 
-                {/* نشر إعلان مدرسي */}
+                {adminTab === "communication" && (
+                  <div className="space-y-3">
+                                    {/* نشر إعلان مدرسي */}
                 <div className="card p-4 space-y-3">
                   <h3 className="text-sm font-black text-[#E8C84A]">نشر إعلان في قسم «مدرستي»</h3>
                   <input
@@ -2839,20 +2883,26 @@
                 {/* رسائل أولياء الأمور */}
                 <div className="card p-4 space-y-2">
                   <h3 className="text-sm font-black text-[#E8C84A]">بريد أولياء الأمور الوارد</h3>
-                  {data.parentMessages.map((msg) => (
-                    <div key={msg.id} className="p-3 rounded-xl bg-[var(--surface2)] text-xs space-y-1">
-                      <div className="flex justify-between font-black text-[#E8C84A]">
-                        <span>{msg.from}</span>
-                        <span>{msg.time}</span>
+                  {(data.parentMessages || []).map((msg) => (
+                    <article key={msg.id} className="p-3 rounded-xl bg-[var(--surface2)] text-xs space-y-2">
+                      <div className="flex justify-between gap-2 font-black text-[#E8C84A]">
+                        <span>{msg.from}</span><span>{msg.time}</span>
                       </div>
-                      <p className="font-bold">{msg.text}</p>
-                    </div>
+                      <p className="font-bold leading-6">{msg.text}</p>
+                      {msg.reply && <div className="rounded-lg bg-[var(--surface)] border border-[var(--line)] p-2"><strong className="text-[#7A8A44]">الرد المرسل</strong><p className="mt-1 leading-6">{msg.reply}</p><span className="text-[10px] text-[var(--muted)]">{msg.replyTime || ""}</span></div>}
+                      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-end">
+                        <textarea rows="2" maxLength={1200} className="input text-xs" placeholder="اكتب رد المدرسة..." value={adminReplyDrafts[msg.id] || ""} onChange={(event) => setAdminReplyDrafts((previous) => ({ ...previous, [msg.id]: event.target.value }))} />
+                        <button type="button" className="btn btn-gold text-xs !py-2 !px-3" onClick={() => replyToParentMessage(msg.id)}>إرسال الرد</button>
+                      </div>
+                    </article>
                   ))}
                 </div>
+                  </div>
+                )}
               </div>
             )}
 
-            {(role === "teacher" || role === "admin") && (
+            {((role === "teacher" && teacherTab === "schedule") || (role === "admin" && adminTab === "classes")) && (
               <section className="card p-4 space-y-3" aria-label="إدارة جدول الحصص الأسبوعي">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <h2 className="text-base font-black text-[#E8C84A]">إدارة جدول الحصص الأسبوعي</h2>
@@ -2864,7 +2914,7 @@
                   </select>
                 </label>
                 {(data.scheduleByGrade?.[teacherCurriculumGrade] || []).map((row, idx) => (
-                  <label key={row.day} className="block text-xs font-black">{row.day}
+                  <label key={row.day} className="schedule-day-field block text-xs font-black">{row.day}
                     <textarea rows="2" maxLength="400" className="input mt-1 text-xs" value={row.classes || ""} placeholder="اكتب حصص اليوم بالترتيب" onChange={(event) => setData((prev) => {
                       const gradeRows = [...(prev.scheduleByGrade?.[teacherCurriculumGrade] || [])];
                       gradeRows[idx] = { ...gradeRows[idx], classes: event.target.value };
@@ -2876,7 +2926,7 @@
               </section>
             )}
 
-            {role === "teacher" && (
+            {role === "teacher" && teacherTab === "attendance" && (
               <section className="card p-4 space-y-3" aria-label="سجل الحضور والغياب اليومي">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <h2 className="text-base font-black text-[#E8C84A]">سجل الحضور والغياب اليومي</h2>
@@ -2901,7 +2951,7 @@
               </section>
             )}
 
-            {role === "teacher" && (
+            {role === "teacher" && teacherTab === "lessons" && (
               <section className="card p-4 space-y-3" aria-label="بنك اختبارات الدروس">
                 <h2 className="text-base font-black text-[#E8C84A]">بنك أسئلة الدروس</h2>
                 <p className="text-xs font-bold text-[var(--muted)]">الدرس المحدد حالياً: {activeLesson.title}</p>
