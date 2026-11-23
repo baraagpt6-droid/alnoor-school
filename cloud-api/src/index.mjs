@@ -146,8 +146,8 @@ async function bootstrapInitialAdmin(body) {
       "INSERT INTO public.school_settings(key,value) VALUES('initial_admin_bootstrap_completed',to_jsonb(now()::text))"
     );
     await client.query(
-      "INSERT INTO public.audit_log(actor_id,actor_role,action,entity,entity_id,metadata) VALUES($1,'admin','bootstrap_initial_admin','school_accounts',$1::text,'{}'::jsonb)",
-      [admin.rows[0].id]
+      "INSERT INTO public.audit_log(actor_id,actor_role,action,entity,entity_id,metadata) VALUES($1,'admin','bootstrap_initial_admin','school_accounts',$2,'{}'::jsonb)",
+      [admin.rows[0].id, String(admin.rows[0].id)]
     );
     await client.query("COMMIT");
     return {
@@ -191,8 +191,8 @@ async function login(request, body) {
     }
     await client.query("DELETE FROM public.login_attempts WHERE attempt_key=$1", [key]);
     await client.query(
-      "INSERT INTO public.audit_log(actor_id,actor_role,action,entity,entity_id) VALUES($1,$2,'login','school_accounts',$1::text)",
-      [result.rows[0].id, role]
+      "INSERT INTO public.audit_log(actor_id,actor_role,action,entity,entity_id) VALUES($1,$2,'login','school_accounts',$3)",
+      [result.rows[0].id, role, String(result.rows[0].id)]
     );
     await client.query("COMMIT");
     const account = result.rows[0];
@@ -222,8 +222,8 @@ async function changePassword(account, body) {
   );
   if (!result.rowCount) throw httpError("كلمة المرور الحالية غير صحيحة.", 401);
   await pool.query(
-    "INSERT INTO public.audit_log(actor_id,actor_role,action,entity,entity_id) VALUES($1,$2,'change_password','school_accounts',$1::text)",
-    [account.id, account.role]
+    "INSERT INTO public.audit_log(actor_id,actor_role,action,entity,entity_id) VALUES($1,$2,'change_password','school_accounts',$3)",
+    [account.id, account.role, String(account.id)]
   );
   return { ok: true, user: result.rows[0] };
 }
