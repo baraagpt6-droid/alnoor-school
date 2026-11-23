@@ -29,6 +29,18 @@ jobs:
           echo "$BODY" | grep -F '"database":"neondb"'
           echo "SchoolAPI health and database connection passed."
 
+      - name: Build and validate Netlify publish directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash .github/scripts/build-netlify.sh
+          test -s site/index.html
+          test -s site/styles.fixed.css
+          test -s site/manifest.json
+          test -s site/sw.js
+          test -s site/vendor/react.production.min.js
+          echo "Netlify production build output passed."
+
       - name: Verify official Netlify PWA deployment
         shell: bash
         run: |
