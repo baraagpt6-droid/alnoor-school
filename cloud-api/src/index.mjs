@@ -790,13 +790,13 @@ async function requestAccountDeletion(request, body) {
   const reference = "ALN-" + randomBytes(5).toString("hex").toUpperCase();
   await pool.query("DELETE FROM public.account_deletion_requests WHERE status IN ('completed','rejected') AND resolved_at < now() - interval '12 months'");
   const result = await pool.query(
-    \`INSERT INTO public.account_deletion_requests
-      (request_reference, account_id, login_id, account_role, contact_phone, request_source, request_ip_hash)
-     SELECT $1,$2,$3,$4,$5,$6,$7
-     WHERE (SELECT count(*) FROM public.account_deletion_requests WHERE request_ip_hash=$7 AND requested_at > now() - interval '1 day') < 5
-     ON CONFLICT (login_id) WHERE status='pending'
-     DO UPDATE SET contact_phone=EXCLUDED.contact_phone, request_source=EXCLUDED.request_source, updated_at=now()
-     RETURNING request_reference, requested_at\`,
+    "INSERT INTO public.account_deletion_requests " +
+    "(request_reference, account_id, login_id, account_role, contact_phone, request_source, request_ip_hash) " +
+    "SELECT $1,$2,$3,$4,$5,$6,$7 " +
+    "WHERE (SELECT count(*) FROM public.account_deletion_requests WHERE request_ip_hash=$7 AND requested_at > now() - interval '1 day') < 5 " +
+    "ON CONFLICT (login_id) WHERE status='pending' " +
+    "DO UPDATE SET contact_phone=EXCLUDED.contact_phone, request_source=EXCLUDED.request_source, updated_at=now() " +
+    "RETURNING request_reference, requested_at",
     [reference, account?.id || null, loginId, account?.role || null, contactPhone, account ? "in-app" : "web", ipHash]
   );
   if (!result.rowCount) throw httpError("تم تجاوز عدد طلبات الحذف المسموح لهذا الاتصال. حاول لاحقاً.", 429);

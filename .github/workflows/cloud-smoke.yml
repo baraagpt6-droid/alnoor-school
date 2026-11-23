@@ -1,4 +1,4 @@
-name: Alnoor School 2.0.3 production smoke test
+name: Alnoor School 2.0.4 production smoke test
 
 on:
   push:
@@ -8,6 +8,7 @@ on:
       - "sw.js"
       - "manifest.json"
       - "privacy.html"
+      - "delete-account.html"
       - "cloud-api/src/index.mjs"
       - ".github/workflows/cloud-smoke.yml"
       - ".github/workflows/deploy.yml"
@@ -31,7 +32,7 @@ jobs:
           API="https://br-falling-rain-azmx7t48-schoolapi.compute.c-3.ap-southeast-1.aws.neon.tech"
           BODY="$(curl --retry 3 --retry-delay 2 --connect-timeout 15 --max-time 30 -fsS "$API/api/health")"
           echo "SchoolAPI health response: $BODY"
-          echo "$BODY" | jq -e '.ok == true and .version == "2.0.2" and .database.database == "neondb"' >/dev/null
+          echo "$BODY" | jq -e '.ok == true and .version == "2.0.4" and .database.database == "neondb"' >/dev/null
           echo "SchoolAPI health and database connection passed."
 
       - name: Verify GitHub Pages production site and PWA
@@ -40,13 +41,15 @@ jobs:
           set -euo pipefail
           SITE="https://baraagpt6-droid.github.io/alnoor-school"
           HTML="$(curl --retry 12 --retry-all-errors --retry-delay 5 --connect-timeout 15 --max-time 45 -fsSL "$SITE/")"
-          echo "$HTML" | grep -F 'const APP_VERSION = "2.0.3+'
+          echo "$HTML" | grep -F 'const APP_VERSION = "2.0.4+'
           MANIFEST="$(curl --retry 3 --retry-delay 2 --connect-timeout 15 --max-time 30 -fsSL "$SITE/manifest.json")"
           POLICY="$(curl --retry 12 --retry-all-errors --retry-delay 5 --connect-timeout 15 --max-time 45 -fsSL "$SITE/privacy.html")"
           echo "$POLICY" | grep -F "سياسة الخصوصية"
+          DELETE_PAGE="$(curl --retry 12 --retry-all-errors --retry-delay 5 --connect-timeout 15 --max-time 45 -fsSL "$SITE/delete-account.html")"
+          echo "$DELETE_PAGE" | grep -F "طلب حذف الحساب والبيانات"
           echo "$MANIFEST" | jq -e '.name | contains("مدرسة النور")' >/dev/null
           WORKER="$(curl --retry 3 --retry-delay 2 --connect-timeout 15 --max-time 30 -fsSL "$SITE/sw.js")"
-          echo "$WORKER" | grep -F 'alnoor-school-v2.0.3+'
+          echo "$WORKER" | grep -F 'alnoor-school-v2.0.4+'
           echo "GitHub Pages site, manifest, and PWA service worker passed."
 
       - name: Check browser and Android CORS origins
@@ -129,3 +132,11 @@ jobs:
           BODY="$(curl --retry 1 --retry-delay 2 --connect-timeout 15 --max-time 40 -fsS -X POST -H "Authorization: Bearer $ALNOOR_TOKEN_admin" -H 'Content-Type: application/json' -d '{"question":"اكتب جملة عربية قصيرة تؤكد نجاح الاتصال."}' "$API/api/assistant")"
           echo "$BODY" | jq -e '.reply | strings | length > 0' >/dev/null
           echo "Noor Assistant API returned a non-empty reply. Provider: $(echo "$BODY" | jq -r '.provider // "unknown"')"
+          STUDENT_REPLY="$(curl --retry 1 --retry-delay 2 --connect-timeout 15 --max-time 40 -fsS -X POST -H "Authorization: Bearer $ALNOOR_TOKEN_student" -H 'Content-Type: application/json' -d '{"question":"اشرح لي درساً من المنهج"}' "$API/api/assistant")"
+          echo "$STUDENT_REPLY" | jq -e '.reply | strings | length > 0' >/dev/null
+          echo "$STUDENT_REPLY" | jq -e '.provider == "school-curriculum-local"' >/dev/null
+          if echo "$STUDENT_REPLY" | grep -Eiq 'pollinations|groq|gemini'; then echo "Student assistant must never call an external provider." >&2; exit 1; fi
+          echo "Student assistant local-only route passed."
+          DELETE_REQUEST="$(jq -n --arg id "PLAY-DELETE-SMOKE-$GITHUB_RUN_ID" '{action:"request_account_deletion",login_id:$id,contact_phone:"+967700000000"}' | curl --retry 1 --retry-delay 1 --connect-timeout 15 --max-time 30 -fsS -H 'Content-Type: application/json' -d @- "$API/api/account/deletion-request")"
+          echo "$DELETE_REQUEST" | jq -e '.ok == true and .status == "pending" and (.request_reference | strings | startswith("ALN-"))' >/dev/null
+          echo "Deletion request API accepted a test submission."

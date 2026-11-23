@@ -1,4 +1,4 @@
-name: Build Alnoor cloud function bundle
+name: Build Alnoor SchoolAPI 2.0.4 cloud function bundle
 
 on:
   pull_request:
@@ -37,13 +37,13 @@ jobs:
           test -s dist/index.mjs
           mkdir -p bundle
           cp dist/index.mjs bundle/index.mjs
-          (cd bundle && zip -q -X ../alnoor-schoolapi-2.0.2.zip index.mjs)
-          unzip -t alnoor-schoolapi-2.0.2.zip
-          sha256sum alnoor-schoolapi-2.0.2.zip
+          (cd bundle && zip -q -X ../alnoor-schoolapi-2.0.4.zip index.mjs)
+          unzip -t alnoor-schoolapi-2.0.4.zip
+          sha256sum alnoor-schoolapi-2.0.4.zip
       - name: Upload Neon function bundle
         uses: actions/upload-artifact@v4
         with:
-          name: alnoor-schoolapi-2.0.2-bundle
-          path: cloud-api/alnoor-schoolapi-2.0.2.zip
+          name: alnoor-schoolapi-2.0.4-bundle
+          path: cloud-api/alnoor-schoolapi-2.0.4.zip
           if-no-files-found: error
           retention-days: 7
