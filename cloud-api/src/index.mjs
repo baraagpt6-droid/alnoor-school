@@ -640,6 +640,10 @@ async function syncStudentProgress(account, body) {
     );
     if (earned) await client.query("UPDATE public.students SET points=points+$2,updated_at=now() WHERE id=$1", [account.student_id, earned]);
     await client.query(
+      "INSERT INTO public.sync_events(entity,entity_id,operation,grade) VALUES('student_progress',$1,'UPDATE',$2)",
+      [account.student_id, student.grade]
+    );
+    await client.query(
       "INSERT INTO public.audit_log(actor_id,actor_role,action,entity,entity_id,metadata) VALUES($1,'student','sync_progress','student_progress',$2,$3::jsonb)",
       [account.id, account.student_id, JSON.stringify({ lessons: completedSet.size, quizzes: quizSet.size, earned })]
     );
