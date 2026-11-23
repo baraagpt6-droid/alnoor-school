@@ -360,10 +360,11 @@ async function syncPush(account, body) {
     if (["admin","teacher"].includes(account.role) && Array.isArray(changes.lessons)) {
       for (const lesson of changes.lessons) {
         if (!lesson?.id || !lesson?.title) continue;
-        if (account.role === "teacher" && lesson.grade && lesson.grade !== account.grade) continue;
+        const targetGrade = lesson.grade || (account.role === "teacher" ? account.grade : null);
+        if (account.role === "teacher" && targetGrade !== account.grade) continue;
         await client.query(
           "INSERT INTO public.lessons(id,grade,subject,title,payload,updated_by) VALUES($1,$2,$3,$4,$5::jsonb,$6) ON CONFLICT(id) DO UPDATE SET grade=EXCLUDED.grade,subject=EXCLUDED.subject,title=EXCLUDED.title,payload=EXCLUDED.payload,updated_at=now(),updated_by=EXCLUDED.updated_by",
-          [String(lesson.id), lesson.grade || null, lesson.subject || null, String(lesson.title).slice(0,200), JSON.stringify(lesson), account.id]
+          [String(lesson.id), targetGrade, lesson.subject || null, String(lesson.title).slice(0,200), JSON.stringify(lesson), account.id]
         );
       }
     }
@@ -371,10 +372,11 @@ async function syncPush(account, body) {
     if (["admin","teacher"].includes(account.role) && Array.isArray(changes.assignments)) {
       for (const item of changes.assignments) {
         if (!item?.id || !item?.title) continue;
-        if (account.role === "teacher" && item.grade && item.grade !== account.grade) continue;
+        const targetGrade = item.grade || (account.role === "teacher" ? account.grade : null);
+        if (account.role === "teacher" && targetGrade !== account.grade) continue;
         await client.query(
           "INSERT INTO public.assignments(id,title,details,question,grade,section,due_at,options,correct_index,xp,submissions,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11::jsonb,$12) ON CONFLICT(id) DO UPDATE SET title=EXCLUDED.title,details=EXCLUDED.details,question=EXCLUDED.question,grade=EXCLUDED.grade,section=EXCLUDED.section,due_at=EXCLUDED.due_at,options=EXCLUDED.options,correct_index=EXCLUDED.correct_index,xp=EXCLUDED.xp,submissions=EXCLUDED.submissions,updated_at=now()",
-          [String(item.id), String(item.title).slice(0,200), item.details || item.subject || null, item.question || null, item.grade || (account.role === "teacher" ? account.grade : null), item.section || null, item.dueDate || null, JSON.stringify(asArray(item.options)), Number.isInteger(Number(item.correctIndex)) ? Number(item.correctIndex) : null, Math.max(0,Math.min(100,Number(item.xp)||0)), JSON.stringify(item.submissions || {}), account.id]
+          [String(item.id), String(item.title).slice(0,200), item.details || item.subject || null, item.question || null, targetGrade, item.section || null, item.dueDate || null, JSON.stringify(asArray(item.options)), Number.isInteger(Number(item.correctIndex)) ? Number(item.correctIndex) : null, Math.max(0,Math.min(100,Number(item.xp)||0)), JSON.stringify(item.submissions || {}), account.id]
         );
       }
     }
