@@ -6,6 +6,10 @@ on:
     paths:
       - ".github/workflows/capture-store-assets.yml"
 
+concurrency:
+  group: alnoor-store-assets-capture
+  cancel-in-progress: true
+
 permissions:
   contents: write
   actions: write
@@ -54,12 +58,19 @@ jobs:
           }
 
           (async () => {
-            await render(path.join(out,"emblem.svg"), path.join(out,"icon-512.png"), {width:512,height:512});
-            await renderOpaque(path.join(out,"feature-graphic.svg"), path.join(out,"feature-graphic-1024x500.png"), 1024, 500);
-            await render(path.join(out,"emblem.svg"), "logo.png", {width:512,height:512});
-            await render(path.join(out,"emblem.svg"), "logo-512.png", {width:512,height:512});
-            await render(path.join(out,"emblem.svg"), "logo-192.png", {width:192,height:192});
-            await render(path.join(out,"emblem.svg"), "apple-touch-icon.png", {width:180,height:180});
+            execFileSync("bash",["-lc","mkdir -p /tmp/alnoor-brand && unzip -oq alnoor-school-release-1.1.3.zip 'logo.png' 'logo-192.png' 'logo-512.png' 'apple-touch-icon.png' -d /tmp/alnoor-brand"]);
+            const sourceLogoPath = fs.existsSync("/tmp/alnoor-brand/logo-512.png") ? "/tmp/alnoor-brand/logo-512.png" : "/tmp/alnoor-brand/logo.png";
+            if (!fs.existsSync(sourceLogoPath)) throw new Error("The original application logo was not found in the release archive.");
+            const originalLogo = fs.readFileSync(sourceLogoPath);
+            const makeOpaque = (input,width,height,dest) => sharp(input).resize(width,height,{fit:"contain",background:"#221b12"}).flatten({background:"#221b12"}).ensureAlpha().png().toFile(dest);
+            await makeOpaque(originalLogo,512,512,path.join(out,"icon-512.png"));
+            const featureBackground = await sharp(path.join(out,"feature-graphic.svg")).png().toBuffer();
+            const featureLogo = await sharp(originalLogo).resize(330,330,{fit:"contain",background:"#221b12"}).flatten({background:"#221b12"}).png().toBuffer();
+            await sharp(featureBackground).composite([{input:featureLogo,left:640,top:85}]).removeAlpha().png().toFile(path.join(out,"feature-graphic-1024x500.png"));
+            await makeOpaque(originalLogo,512,512,"logo.png");
+            await makeOpaque(originalLogo,512,512,"logo-512.png");
+            await makeOpaque(originalLogo,192,192,"logo-192.png");
+            await makeOpaque(originalLogo,180,180,"apple-touch-icon.png");
 
             // Publish the missing web/PWA logo files before capturing the published site.
             execFileSync("git",["config","user.name","github-actions[bot]"]);
