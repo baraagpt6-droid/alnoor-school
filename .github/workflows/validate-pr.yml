@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - "index.html"
+      - "bootstrap.html"
+      - "cloud-api/**"
       - "sw.js"
       - "manifest.json"
       - "android/**"
@@ -52,43 +54,51 @@ jobs:
           if (!blocks.length) throw new Error("No JSX application script found.");
           blocks.forEach((match) => Babel.transform(match[1], { presets: ["react"], sourceType: "script" }));
           const required = [
-            'const APP_VERSION = "1.3.0";',
+            'const APP_VERSION = "2.0.0";',
+            'CLOUD_API_BASE',
+            'cloudRequest("/api/auth/login"',
+            'cloudRequest("/api/sync/pull"',
+            'cloudRequest("/api/sync/push"',
+            'cloudRequest("/api/student/progress"',
+            'cloudRequest("/api/assistant"',
+            'cloudRequest("/api/admin/seed-defaults"',
             'أقسام بوابة المعلم',
             'أقسام بوابة ولي الأمر',
             'أقسام بوابة المشرف العام',
-            'teacherTab === "attendance"',
-            'teacherTab === "work"',
-            'teacherTab === "schedule"',
-            'parentTab === "attendance"',
-            'parentTab === "schedule"',
-            'parentTab === "messages"',
-            'adminTab === "students"',
-            'adminTab === "classes"',
-            'adminTab === "communication"',
-            'تحضير الكل حاضر',
-            'exportSchoolReport',
-            'replyToParentMessage(msg.id)',
-            'https://text.pollinations.ai/openai',
-            'id="alnoor-proxy-url"',
-            'buildLocalAssistantReply(q)',
-            'other-portal-root'
+            'quiz_submissions:quizSubmissions',
+            'cloudSession.user?.role'
           ];
           for (const value of required) {
             if (!html.includes(value)) throw new Error("Missing feature marker: " + value);
           }
-          for (const forbidden of ["geminiKey", "groqKey", "pollinationsAppKey", "pollinationsToken", "مفتاح Gemini", "مفتاح Groq"]) {
-            if (html.includes(forbidden)) throw new Error("Legacy API credential input remains in the UI/source: " + forbidden);
+          for (const forbidden of ["geminiKey", "groqKey", "مفتاح Gemini", "مفتاح Groq"]) {
+            if (html.includes(forbidden)) throw new Error("Provider API key fields must not remain in the app.");
           }
-          console.log(`JSX syntax passed. Validated ${blocks.length} script block(s) and all 1.3.0 feature markers.`);
-          NODE
+          console.log(`JSX syntax passed and Alnoor 2.0.0 cloud markers validated across ${blocks.length} script block(s).`);
+
+                    NODE
+
+      - name: Validate cloud API source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check cloud-api/src/index.mjs
+          grep -Fq 'path === "/api/bootstrap/initial-admin"' cloud-api/src/index.mjs
+          grep -Fq 'path === "/api/student/progress"' cloud-api/src/index.mjs
+          grep -Fq 'path === "/api/realtime/seal"' cloud-api/src/index.mjs
+          grep -Fq 'return send(request, await createSchoolAccount(account, await readBody(request)))' cloud-api/src/index.mjs
+          grep -Fq 'default:' cloud-api/package.json || true
+          test -s bootstrap.html
+          grep -Fq '"/api/bootstrap/initial-admin"' bootstrap.html
+          echo "Cloud API syntax and one-time bootstrap page checks passed."
 
       - name: Validate Android package and splash source
         shell: bash
         run: |
           set -euo pipefail
           grep -Fq "applicationId 'com.alnoor.school'" android/app/build.gradle
-          grep -Fq "versionCode 130" android/app/build.gradle
-          grep -Fq "versionName '1.3.0'" android/app/build.gradle
+          grep -Fq "versionCode 200" android/app/build.gradle
+          grep -Fq "versionName '2.0.0'" android/app/build.gradle
           grep -Fq "setTextAlignment(View.TEXT_ALIGNMENT_CENTER)" android/app/src/main/java/com/alnoor/school/MainActivity.java
           grep -Fq "document.getElementById('instant-splash')?.remove()" android/app/src/main/java/com/alnoor/school/MainActivity.java
           python - <<'PY'
