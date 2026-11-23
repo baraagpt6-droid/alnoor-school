@@ -99,29 +99,24 @@ jobs:
           blocks.forEach((match, index) => Babel.transform(match[1], { presets: ["react"], sourceType: "script" }));
           console.log(`Validated ${blocks.length} JSX script block(s).`);
           const required = [
-            'const APP_VERSION = "1.3.0";',
+            'const APP_VERSION = "2.0.0";',
+            'CLOUD_API_BASE',
+            'cloudRequest("/api/auth/login"',
+            'cloudRequest("/api/sync/pull"',
+            'cloudRequest("/api/sync/push"',
+            'cloudRequest("/api/student/progress"',
+            'cloudRequest("/api/assistant"',
             'أقسام بوابة المعلم',
             'أقسام بوابة ولي الأمر',
             'أقسام بوابة المشرف العام',
             'teacherTab === "attendance"',
-            'teacherTab === "work"',
-            'teacherTab === "schedule"',
             'parentTab === "attendance"',
-            'parentTab === "schedule"',
-            'parentTab === "messages"',
-            'adminTab === "students"',
-            'adminTab === "classes"',
             'adminTab === "communication"',
-            'تحضير الكل حاضر',
-            'exportSchoolReport',
-            'replyToParentMessage(msg.id)',
-            'https://text.pollinations.ai/',
-            'id="alnoor-proxy-url"',
-            'other-portal-root'
+            'quiz_submissions:quizSubmissions'
           ];
-          for (const value of required) if (!html.includes(value)) throw new Error("Missing release feature marker: " + value);
-          if (html.includes("مفتاح Gemini") || html.includes("مفتاح Groq")) throw new Error("Legacy provider key fields must not appear in user UI.");
-          console.log("Validated 1.3.0 portal, attendance, reporting, and assistant feature markers.");
+          for (const value of required) if (!html.includes(value)) throw new Error("Missing cloud release marker: " + value);
+          if (html.includes("مفتاح Gemini") || html.includes("مفتاح Groq")) throw new Error("Provider keys must not appear in the web UI.");
+          console.log("Validated Alnoor 2.0.0 cloud application markers.");
           NODE
 
       - name: Verify Android release metadata and native splash
@@ -130,7 +125,7 @@ jobs:
           set -euo pipefail
           grep -Fq "applicationId 'com.alnoor.school'" android/app/build.gradle
           grep -Fq "versionCode 130" android/app/build.gradle
-          grep -Fq "versionName '1.3.0'" android/app/build.gradle
+          grep -Fq "versionName '2.0.0'" android/app/build.gradle
           grep -Fq "setTextAlignment(View.TEXT_ALIGNMENT_CENTER)" android/app/src/main/java/com/alnoor/school/MainActivity.java
           grep -Fq "document.getElementById('instant-splash')?.remove()" android/app/src/main/java/com/alnoor/school/MainActivity.java
           grep -Fq "versionCode" android/app/build.gradle
@@ -157,14 +152,14 @@ jobs:
           EXPECTED_CERT="054eeea383f75d177f6c7dfa1a55ad43dc2dbafb22253ab34f0c9d05778373e6"
           test "$ACTUAL_CERT" = "$EXPECTED_CERT"
           "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -v 4 "$APK"
-          cp "$APK" alnoor-school-1.3.0.apk
-          sha256sum alnoor-school-1.3.0.apk
+          cp "$APK" alnoor-school-2.0.0.apk
+          sha256sum alnoor-school-2.0.0.apk
           echo "APK signature and expected release certificate verified."
 
       - name: Upload signed APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: alnoor-school-1.3.0-signed-apk
-          path: alnoor-school-1.3.0.apk
+          name: alnoor-school-2.0.0-signed-apk
+          path: alnoor-school-2.0.0.apk
           if-no-files-found: error
           retention-days: 90
