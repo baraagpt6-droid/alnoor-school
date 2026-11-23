@@ -22,7 +22,7 @@ import android.widget.ProgressBar;
 import android.widget.Toast;
 
 public class MainActivity extends Activity {
-    private static final String HOME_URL = "https://baraag6-droid.github.io/alnoor-school/";
+    private static final String HOME_URL = "https://baraagpt6-droid.github.io/alnoor-school/";
     private WebView webView;
     private ProgressBar progressBar;
 
