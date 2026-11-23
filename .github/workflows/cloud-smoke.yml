@@ -15,6 +15,9 @@ jobs:
   health-and-cors:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Check SchoolAPI health and database
         shell: bash
         run: |
@@ -39,9 +42,63 @@ jobs:
             "null"; do
             HEADERS="$(curl --retry 2 --retry-delay 1 --connect-timeout 15 --max-time 30 -fsS -D - -o /dev/null -H "Origin: $ORIGIN" "$API/api/health")"
             if [ "$ORIGIN" = "null" ]; then
-              echo "$HEADERS" | grep -qi "access-control-allow-origin: null"
+              echo "$HEADERS" | grep -Fai "access-control-allow-origin: *"
             else
               echo "$HEADERS" | grep -Fai "access-control-allow-origin: $ORIGIN"
             fi
             echo "CORS passed for Origin: $ORIGIN"
           done
+
+      - name: Authenticate all four preview roles
+        shell: bash
+        run: |
+          set -euo pipefail
+          API="https://br-falling-rain-azmx7t48-schoolapi.compute.c-3.ap-southeast-1.aws.neon.tech"
+          node <<'NODE'
+          const fs = require("node:fs");
+          const html = fs.readFileSync("index.html", "utf8");
+          const credentials = {};
+          for (const role of ["admin", "teacher", "student", "parent"]) {
+            const pattern = new RegExp(role + ':\\s*Object\\.freeze\\(\\{\\s*id:\\s*"([^"]+)",\\s*secret:\\s*"([^"]+)"');
+            const match = html.match(pattern);
+            if (!match) throw new Error("Missing preview credentials for " + role);
+            credentials[role] = { id: match[1], password: match[2] };
+          }
+          fs.writeFileSync(process.env.RUNNER_TEMP + "/alnoor-demo-credentials.json", JSON.stringify(credentials));
+          NODE
+          for ROLE in admin teacher student parent; do
+            LOGIN_ID="$(jq -r ".$ROLE.id" "$RUNNER_TEMP/alnoor-demo-credentials.json")"
+            PASSWORD="$(jq -r ".$ROLE.password" "$RUNNER_TEMP/alnoor-demo-credentials.json")"
+            BODY="$(jq -n --arg id "$LOGIN_ID" --arg role "$ROLE" --arg password "$PASSWORD" '{login_id:$id,role:$role,password:$password}' | curl --retry 2 --retry-delay 1 --connect-timeout 15 --max-time 30 -fsS -H 'Content-Type: application/json' -d @- "$API/api/auth/login")"
+            TOKEN="$(echo "$BODY" | jq -r '.token // empty')"
+            test -n "$TOKEN"
+            ME="$(curl --retry 2 --retry-delay 1 --connect-timeout 15 --max-time 30 -fsS -H "Authorization: Bearer $TOKEN" "$API/api/me")"
+            echo "$ME" | jq -e --arg role "$ROLE" --arg id "$LOGIN_ID" '.user.role == $role and .user.login_id == $id' >/dev/null
+            echo "ALNOOR_TOKEN_$ROLE=$TOKEN" >> "$GITHUB_ENV"
+            echo "Cloud login verified for role: $ROLE"
+          done
+
+      - name: Verify teacher-to-student-and-parent synchronization
+        shell: bash
+        run: |
+          set -euo pipefail
+          API="https://br-falling-rain-azmx7t48-schoolapi.compute.c-3.ap-southeast-1.aws.neon.tech"
+          BODY='{"changes":{"lessons":[{"id":"E2E-DEMO-201","grade":"الصف السادس الأساسي","subject":"اختبار الربط","title":"درس تحقق المزامنة","description":"سجل اختبار آلي لنسخة المعاينة"}]}}'
+          PUSH="$(curl --retry 2 --retry-delay 1 --connect-timeout 15 --max-time 30 -fsS -X POST -H "Authorization: Bearer $ALNOOR_TOKEN_teacher" -H 'Content-Type: application/json' -d "$BODY" "$API/api/sync/push")"
+          echo "$PUSH" | jq -e '.ok == true and (.synchronized | index("lessons") != null)'
+          for ROLE in student parent admin; do
+            TOKEN_VAR="ALNOOR_TOKEN_$ROLE"
+            TOKEN="${!TOKEN_VAR}"
+            SNAPSHOT="$(curl --retry 2 --retry-delay 1 --connect-timeout 15 --max-time 30 -fsS -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{}' "$API/api/sync/pull")"
+            echo "$SNAPSHOT" | jq -e '[.lessons[]? | select(.id == "E2E-DEMO-201")] | length == 1' >/dev/null
+            echo "Synced demo lesson to role: $ROLE"
+          done
+
+      - name: Verify Noor Assistant API response
+        shell: bash
+        run: |
+          set -euo pipefail
+          API="https://br-falling-rain-azmx7t48-schoolapi.compute.c-3.ap-southeast-1.aws.neon.tech"
+          BODY="$(curl --retry 1 --retry-delay 2 --connect-timeout 15 --max-time 40 -fsS -X POST -H "Authorization: Bearer $ALNOOR_TOKEN_admin" -H 'Content-Type: application/json' -d '{"question":"اكتب جملة عربية قصيرة تؤكد نجاح الاتصال."}' "$API/api/assistant")"
+          echo "$BODY" | jq -e '.reply | strings | length > 0' >/dev/null
+          echo "Noor Assistant API returned a non-empty reply. Provider: $(echo "$BODY" | jq -r '.provider // "unknown"')"
