@@ -443,6 +443,12 @@ async function syncPush(account, body) {
         }
       }
     }
+    for (const entity of Object.keys(changes)) {
+      await client.query(
+        "INSERT INTO public.sync_events(entity,entity_id,operation,grade) VALUES($1,$2,'UPDATE',$3)",
+        [entity, "school", account.role === "teacher" ? account.grade : null]
+      );
+    }
     await client.query(
       "INSERT INTO public.audit_log(actor_id,actor_role,action,entity,metadata) VALUES($1,$2,'sync_push','school_data',$3::jsonb)",
       [account.id, account.role, JSON.stringify({ keys: Object.keys(changes) })]
