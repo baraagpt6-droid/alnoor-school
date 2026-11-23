@@ -1,0 +1,150 @@
+name: Build Google Play store assets (2.0.4)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/capture-store-assets.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install browser tools
+        run: |
+          npm init -y
+          npm install --no-save playwright sharp
+          npx playwright install --with-deps chromium
+      - name: Render official graphics and capture published app
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
+          const path = require("node:path");
+          const { execFileSync } = require("node:child_process");
+          const sharp = require("sharp");
+          const { chromium } = require("playwright");
+
+          const repo = "baraagpt6-droid/alnoor-school";
+          const appUrl = "https://baraagpt6-droid.github.io/alnoor-school/";
+          const out = "store-assets";
+          const shots = path.join(out, "screenshots");
+          fs.mkdirSync(shots, { recursive: true });
+
+          async function render(source, dest, options) {
+            const input = fs.readFileSync(source);
+            await sharp(input).resize(options.width, options.height).ensureAlpha().png().toFile(dest);
+          }
+          async function renderOpaque(source, dest, width, height) {
+            const input = fs.readFileSync(source);
+            await sharp(input).resize(width, height).removeAlpha().png().toFile(dest);
+          }
+
+          (async () => {
+            await render(path.join(out,"emblem.svg"), path.join(out,"icon-512.png"), {width:512,height:512});
+            await renderOpaque(path.join(out,"feature-graphic.svg"), path.join(out,"feature-graphic-1024x500.png"), 1024, 500);
+            await render(path.join(out,"emblem.svg"), "logo.png", {width:512,height:512});
+            await render(path.join(out,"emblem.svg"), "logo-512.png", {width:512,height:512});
+            await render(path.join(out,"emblem.svg"), "logo-192.png", {width:192,height:192});
+            await render(path.join(out,"emblem.svg"), "apple-touch-icon.png", {width:180,height:180});
+
+            // Publish the missing web/PWA logo files before capturing the published site.
+            execFileSync("git",["config","user.name","github-actions[bot]"]);
+            execFileSync("git",["config","user.email","41898282+github-actions[bot]@users.noreply.github.com"]);
+            execFileSync("git",["add",out+"/icon-512.png",out+"/feature-graphic-1024x500.png","logo.png","logo-192.png","logo-512.png","apple-touch-icon.png"]);
+            execFileSync("git",["commit","-m","Add Alnoor School brand and Play Store graphics"]);
+            execFileSync("git",["push","origin","main"]);
+
+            // Wait for the Pages deployment triggered by the same main-branch update.
+            let logoReady = false;
+            for (let n=0;n<48;n++) {
+              try {
+                const response = await fetch(appUrl+"logo.png?check="+Date.now());
+                if (response.ok) { logoReady = true; break; }
+              } catch {}
+              await new Promise(resolve => setTimeout(resolve,5000));
+            }
+            if (!logoReady) throw new Error("GitHub Pages did not publish logo.png; refusing to capture stale/broken pages.");
+
+            const browser = await chromium.launch({headless:true});
+            const context = await browser.newContext({
+              viewport:{width:432,height:768}, deviceScaleFactor:2.5,
+              isMobile:true, hasTouch:true, locale:"ar", timezoneId:"Asia/Kuala_Lumpur"
+            });
+            const page = await context.newPage();
+            page.setDefaultTimeout(60000);
+            page.on("pageerror", error => console.error("PAGE_ERROR:",error.message));
+            await page.goto(appUrl,{waitUntil:"domcontentloaded",timeout:120000});
+            await page.getByRole("button",{name:"دخول كمشرف",exact:true}).waitFor({state:"visible"});
+            await page.evaluate(() => document.fonts.ready);
+            await page.waitForTimeout(2500);
+            await page.screenshot({path:path.join(shots,"01-login.png"),fullPage:false,animations:"disabled"});
+
+            async function takeRole(buttonName, portalHeading, fileName, openAssistant=false) {
+              await page.getByRole("button",{name:buttonName,exact:true}).click();
+              await page.waitForFunction((heading) => document.body.innerText.includes(heading), portalHeading, {timeout:60000});
+              await page.waitForTimeout(2500);
+              if (openAssistant) {
+                await page.locator('button[aria-label="فتح مساعد نور"]').click();
+                await page.locator(".alnoor-ai-panel").waitFor({state:"visible"});
+                await page.waitForTimeout(1200);
+              }
+              await page.evaluate(() => window.scrollTo(0,0));
+              await page.screenshot({path:path.join(shots,fileName),fullPage:false,animations:"disabled"});
+              if (!openAssistant) {
+                await page.locator("button").filter({hasText:"خروج"}).first().click();
+                await page.getByRole("button",{name:"دخول كمشرف",exact:true}).waitFor({state:"visible"});
+              }
+            }
+
+            await takeRole("دخول كمشرف","بوابة المشرف العام","02-administrator.png");
+            await takeRole("دخول كمعلم","بوابة المعلم","03-teacher-lessons.png");
+            await takeRole("دخول كطالب","بوابة الطالب","04-student-noor-assistant.png",true);
+            await browser.close();
+
+            // Normalize every screenshot to an exact Play Console phone canvas and 24-bit RGB PNG.
+            for (const file of fs.readdirSync(shots).filter(name=>name.endsWith(".png"))) {
+              const full = path.join(shots,file);
+              await sharp(full).resize(1080,1920,{fit:"fill"}).removeAlpha().png().toFile(full+".tmp");
+              fs.renameSync(full+".tmp",full);
+              const meta = await sharp(full).metadata();
+              if (meta.width!==1080 || meta.height!==1920 || meta.hasAlpha) throw new Error("Invalid screenshot output: "+file);
+              console.log(file,meta.width+"x"+meta.height,"RGB");
+            }
+
+            // Bundle all files for a single download.
+            execFileSync("bash",["-lc","zip -qr google-play-submission-v2.0.4.zip store-assets logo.png logo-192.png logo-512.png apple-touch-icon.png"]);
+            fs.copyFileSync("google-play-submission-v2.0.4.zip",path.join(out,"google-play-submission-v2.0.4.zip"));
+
+            // The one-shot capture workflow removes itself after producing the files.
+            execFileSync("git",["rm",".github/workflows/capture-store-assets.yml"]);
+            execFileSync("git",["add",out+"/screenshots",out+"/google-play-submission-v2.0.4.zip"]);
+            execFileSync("git",["commit","-m","Add verified Alnoor School Play listing screenshots and package"]);
+            execFileSync("git",["push","origin","main"]);
+          })().catch(error => { console.error(error); process.exit(1); });
+          NODE
+      - name: Upload the complete bundle as an Actions artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: alnoor-school-google-play-assets-2.0.4
+          path: |
+            store-assets/
+            logo.png
+            logo-192.png
+            logo-512.png
+            apple-touch-icon.png
+            google-play-submission-v2.0.4.zip
+          if-no-files-found: error
+          retention-days: 30
