@@ -29,6 +29,19 @@ jobs:
           echo "$BODY" | grep -F '"database":"neondb"'
           echo "SchoolAPI health and database connection passed."
 
+      - name: Verify official Netlify PWA deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          SITE="https://alnoor-school.netlify.app"
+          HTML="$(curl --retry 3 --retry-delay 2 --connect-timeout 15 --max-time 45 -fsSL "$SITE/")"
+          echo "$HTML" | grep -F 'const APP_VERSION = "2.0.1";'
+          MANIFEST="$(curl --retry 3 --retry-delay 2 --connect-timeout 15 --max-time 30 -fsSL "$SITE/manifest.json")"
+          echo "$MANIFEST" | jq -e '.name | contains("مدرسة النور")' >/dev/null
+          WORKER="$(curl --retry 3 --retry-delay 2 --connect-timeout 15 --max-time 30 -fsSL "$SITE/sw.js")"
+          echo "$WORKER" | grep -F 'alnoor-school-v2.0.1'
+          echo "Netlify site, manifest, and PWA service worker passed."
+
       - name: Check browser and Android CORS origins
         shell: bash
         run: |
