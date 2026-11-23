@@ -32,7 +32,9 @@ jobs:
           : "${ANDROID_HOME:?Android SDK is not preinstalled on this runner}"
           SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
           test -x "$SDKMANAGER"
+          set +o pipefail
           yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses >/dev/null
+          set -o pipefail
           "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Set up Gradle 8.9
