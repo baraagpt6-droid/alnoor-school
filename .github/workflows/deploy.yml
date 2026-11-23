@@ -1,4 +1,4 @@
-name: Deploy مدرسة النور 1.2.0 to GitHub Pages
+name: Deploy مدرسة النور 1.2.1 to GitHub Pages
 
 on:
   push:
@@ -44,8 +44,8 @@ jobs:
           test -s site/styles.fixed.css
           test -s site/manifest.json
           test -s site/sw.js
-          grep -q 'const APP_VERSION = "1.2.0";' site/index.html
-          grep -q 'alnoor-school-v1.2.0' site/sw.js
+          grep -q 'const APP_VERSION = "1.2.1";' site/index.html
+          grep -q 'alnoor-school-v1.2.1' site/sw.js
 
       - name: Bundle local runtime libraries
         shell: bash
@@ -67,7 +67,7 @@ jobs:
           from pathlib import Path
           import os, re
           build_id = os.environ["GITHUB_SHA"][:7]
-          version = f"1.2.0+{build_id}"
+          version = f"1.2.1+{build_id}"
           html = Path("site/index.html")
           source = html.read_text(encoding="utf-8")
           source, count = re.subn(r'const APP_VERSION = "[^"]+";', f'const APP_VERSION = "{version}";', source, count=1)
@@ -83,7 +83,7 @@ jobs:
           print(f"Publishing version {version}")
           PY
           grep -q 'vendor/qrcode.min.js' site/index.html
-          grep -q 'alnoor-school-v1.2.0+' site/sw.js
+          grep -q 'alnoor-school-v1.2.1+' site/sw.js
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
@@ -91,7 +91,7 @@ jobs:
       - name: Upload website source bundle
         uses: actions/upload-artifact@v4
         with:
-          name: alnoor-school-1.2.0-website
+          name: alnoor-school-1.2.1-website
           path: site/
           if-no-files-found: error
           retention-days: 30
