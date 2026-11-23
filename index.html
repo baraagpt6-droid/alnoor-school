@@ -1180,13 +1180,45 @@
           return;
         }
         const previous = previousCloudDataRef.current || {};
+        const changed = new Set(localSyncKeys.filter((key) => JSON.stringify(previous[key]) !== JSON.stringify(data[key])));
+        if (!changed.size) return;
+        const accountRole = cloudSession.user?.role;
         const changes = {};
-        for (const key of localSyncKeys) {
-          if (JSON.stringify(previous[key]) !== JSON.stringify(data[key])) changes[key] = data[key];
+        if (accountRole === "admin") {
+          for (const key of changed) changes[key] = data[key];
+        } else if (accountRole === "teacher") {
+          for (const key of ["students","lessons","assignments","attendanceRecords","parentMessages","scheduleByGrade"]) {
+            if (changed.has(key)) changes[key] = data[key];
+          }
+        } else if (accountRole === "parent" && changed.has("parentMessages")) {
+          changes.parentMessages = data.parentMessages;
         }
-        if (!Object.keys(changes).length) return;
+        const studentProgressChanged = accountRole === "student" && ["students","lessons","assignments"].some((key) => changed.has(key));
+        if (!Object.keys(changes).length && !studentProgressChanged) { previousCloudDataRef.current = data; return; }
         const timer = window.setTimeout(async () => {
-          const ok = await pushCloudChanges(changes, cloudSession);
+          let ok = true;
+          if (studentProgressChanged) {
+            try {
+              const studentId = cloudSession.user?.student_id;
+              const completedLessons = (data.lessons || []).filter((lesson) => (lesson.completedBy || []).includes(studentId)).map((lesson) => lesson.id);
+              const quizCompletedBy = (data.lessons || []).flatMap((lesson) => (lesson.quizCompletedBy || []).filter((key) => key.startsWith(studentId + ":")));
+              const assignmentSubmissions = Object.fromEntries((data.assignments || [])
+                .filter((assignment) => assignment.submissions?.[studentId])
+                .map((assignment) => [assignment.id, assignment.submissions[studentId]]));
+              await cloudRequest("/api/student/progress", {
+                method:"POST",
+                body:{ completed_lessons:completedLessons, quiz_completed_by:quizCompletedBy, assignment_submissions:assignmentSubmissions },
+                token:cloudSession.token
+              });
+              setCloudLastSync(new Date().toLocaleTimeString("ar"));
+              setCloudStatus("online");
+            } catch (error) {
+              ok = false;
+              setCloudStatus(error.status === 401 ? "expired" : "pending");
+              console.warn("Student progress will be retried when online.", error);
+            }
+          }
+          if (Object.keys(changes).length) ok = (await pushCloudChanges(changes, cloudSession)) && ok;
           if (ok) previousCloudDataRef.current = data;
         }, 800);
         return () => window.clearTimeout(timer);
@@ -1346,17 +1378,16 @@
         suppressCloudPushRef.current = true;
         setData((previous) => ({
           ...previous,
-          students: Array.isArray(snapshot.students) ? snapshot.students : previous.students,
-          assignments: Array.isArray(snapshot.assignments) ? snapshot.assignments : previous.assignments,
-          announcements: Array.isArray(snapshot.announcements) ? snapshot.announcements : previous.announcements,
-          parentMessages: Array.isArray(snapshot.parentMessages) ? snapshot.parentMessages : previous.parentMessages,
-          scheduleByGrade: snapshot.scheduleByGrade && typeof snapshot.scheduleByGrade === "object" ? snapshot.scheduleByGrade : previous.scheduleByGrade,
-          attendanceRecords: Array.isArray(snapshot.attendanceRecords) ? snapshot.attendanceRecords : previous.attendanceRecords,
-          lessons: Array.isArray(snapshot.lessons) ? snapshot.lessons : previous.lessons
+          students: Array.isArray(snapshot.students) && snapshot.students.length ? snapshot.students : previous.students,
+          assignments: Array.isArray(snapshot.assignments) && snapshot.assignments.length ? snapshot.assignments : previous.assignments,
+          announcements: Array.isArray(snapshot.announcements) && snapshot.announcements.length ? snapshot.announcements : previous.announcements,
+          parentMessages: Array.isArray(snapshot.parentMessages) && snapshot.parentMessages.length ? snapshot.parentMessages : previous.parentMessages,
+          scheduleByGrade: snapshot.scheduleByGrade && Object.keys(snapshot.scheduleByGrade).length ? snapshot.scheduleByGrade : previous.scheduleByGrade,
+          attendanceRecords: Array.isArray(snapshot.attendanceRecords) && snapshot.attendanceRecords.length ? snapshot.attendanceRecords : previous.attendanceRecords,
+          lessons: Array.isArray(snapshot.lessons) && snapshot.lessons.length ? snapshot.lessons : previous.lessons
         }));
         setCloudLastSync(new Date().toLocaleTimeString("ar"));
         setCloudStatus("online");
-        previousCloudDataRef.current = data;
       };
 
       const pullCloudSnapshot = async (session = cloudSession) => {
