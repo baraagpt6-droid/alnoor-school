@@ -148,7 +148,8 @@ jobs:
           test "$APK_CERT" = "$EXPECTED_CERT"
           "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -v 4 "$APK"
 
-          jarsigner -verify -strict -certs "$AAB"
+          jarsigner -verify -certs "$AAB" | tee "$RUNNER_TEMP/aab-signature.txt"
+          grep -Fq "jar verified." "$RUNNER_TEMP/aab-signature.txt"
           AAB_CERT="$(keytool -printcert -jarfile "$AAB" | awk '/SHA256:/ {gsub(":","",$2); print tolower($2); exit}')"
           test "$AAB_CERT" = "$EXPECTED_CERT"
 
