@@ -1,5 +1,5 @@
 import { Pool } from "pg";
-import { createHmac, timingSafeEqual, randomBytes } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual, randomBytes } from "node:crypto";
 import { createRealtime, rawSql } from "@neon/realtime/server";
 
 const ORIGIN = process.env.APP_ORIGIN || "https://baraagpt6-droid.github.io";
@@ -105,7 +105,7 @@ async function login(request, body) {
   const password = String(body.password || "");
   if (!loginId || !password || !["admin", "teacher", "student", "parent"].includes(role)) throw httpError("أدخل المعرّف وكلمة المرور وحدد البوابة.", 400);
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  const key = (await import("node:crypto")).createHash("sha256").update(role + "|" + loginId + "|" + ip).digest("hex");
+  const key = createHash("sha256").update(role + "|" + loginId + "|" + ip).digest("hex");
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -213,17 +213,36 @@ async function pullSnapshot(account) {
     attendanceRows = (await pool.query("SELECT a.*,s.grade FROM public.attendance a JOIN public.students s ON s.id=a.student_id WHERE a.student_id=$1 ORDER BY event_date DESC", [studentId])).rows;
     messageRows = (await pool.query("SELECT * FROM public.messages WHERE student_id=$1 ORDER BY created_at DESC LIMIT 200", [studentId])).rows;
   }
-  const lessons = lessonRows.map((row) => ({
-    ...parseJson(row.payload, {}),
-    id: row.id, grade: row.grade, subject: row.subject, title: row.title
-  }));
-  const assignments = assignmentRows.map((row) => ({
-    id: row.id, title: row.title, details: row.details, question: row.question,
-    grade: row.grade, section: row.section, dueDate: row.due_at,
-    subject: row.details?.subject || "", options: parseJson(row.options, []),
-    correctIndex: row.correct_index, xp: row.xp,
-    submissions: parseJson(row.submissions, {})
-  }));
+  const lessons = lessonRows.map((row) => {
+    const payload = parseJson(row.payload, {});
+    if (account.role === "student" || account.role === "parent") {
+      const ownId = account.student_id;
+      payload.completedBy = asArray(payload.completedBy).filter((id) => id === ownId);
+      payload.quizCompletedBy = asArray(payload.quizCompletedBy).filter((key) => String(key).startsWith(ownId + ":"));
+      const allSubmissions = payload.quizSubmissions && typeof payload.quizSubmissions === "object" ? payload.quizSubmissions : {};
+      payload.quizSubmissions = Object.fromEntries(Object.entries(allSubmissions).filter(([key]) => key.startsWith(ownId + ":")));
+    }
+    return { ...payload, id: row.id, grade: row.grade, subject: row.subject, title: row.title };
+  });
+  const assignments = assignmentRows.map((row) => {
+    const submissions = parseJson(row.submissions, {});
+    if (account.role === "student" || account.role === "parent") {
+      const own = submissions[account.student_id];
+      return {
+        id: row.id, title: row.title, details: row.details, question: row.question,
+        grade: row.grade, section: row.section, dueDate: row.due_at,
+        subject: row.details || "", options: parseJson(row.options, []),
+        correctIndex: row.correct_index, xp: row.xp,
+        submissions: own ? { [account.student_id]: own } : {}
+      };
+    }
+    return {
+      id: row.id, title: row.title, details: row.details, question: row.question,
+      grade: row.grade, section: row.section, dueDate: row.due_at,
+      subject: row.details || "", options: parseJson(row.options, []),
+      correctIndex: row.correct_index, xp: row.xp, submissions
+    };
+  });
   const announcements = announcementRows.map((row) => ({
     id: row.id, title: row.title, date: row.published_at,
     body: row.details, targetGrade: row.target_grade
@@ -516,11 +535,12 @@ async function syncStudentProgress(account, body) {
       const found = await client.query("SELECT id,payload FROM public.lessons WHERE id=$1 AND (grade IS NULL OR grade=$2) FOR UPDATE", [lessonId, student.grade]);
       if (!found.rowCount) continue;
       const payload = found.rows[0].payload || {};
+      const wasAlreadyCompleted = asArray(payload.completedBy).includes(account.student_id);
       const done = [...new Set([...asArray(payload.completedBy), account.student_id])];
       payload.completedBy = done;
       await client.query("UPDATE public.lessons SET payload=$2::jsonb,updated_at=now() WHERE id=$1", [lessonId, JSON.stringify(payload)]);
       completedSet.add(lessonId);
-      earned += Math.max(0, Math.min(100, Number(payload.xp) || 0));
+      if (!wasAlreadyCompleted) earned += Math.max(0, Math.min(100, Number(payload.xp) || 0));
     }
 
     for (const item of quizzes) {
@@ -534,7 +554,10 @@ async function syncStudentProgress(account, body) {
       const quiz = asArray(payload.questions).find((q) => String(q.id) === quizId);
       if (!quiz || Number(quiz.correctIndex) !== answer) continue;
       const key = account.student_id + ":" + lessonId + ":" + quizId;
-      if (quizSet.has(key)) continue;
+      if (quizSet.has(key) || asArray(payload.quizCompletedBy).includes(key)) {
+        quizSet.add(key);
+        continue;
+      }
       quizSet.add(key);
       payload.quizCompletedBy = [...new Set([...asArray(payload.quizCompletedBy), key])];
       payload.quizSubmissions = { ...(payload.quizSubmissions || {}), [key]: { answer: answer, verified: true } };
@@ -591,6 +614,7 @@ async function assistant(account, body) {
     const url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent?key=" + encodeURIComponent(process.env.GEMINI_API_KEY);
     const response = await fetch(url, {
       method: "POST", headers: { "content-type": "application/json" },
+      signal: AbortSignal.timeout(22000),
       body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: question }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 1200 } })
     });
     const payload = await response.json().catch(() => ({}));
@@ -602,6 +626,7 @@ async function assistant(account, body) {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: { "content-type": "application/json", authorization: "Bearer " + process.env.GROQ_API_KEY },
+      signal: AbortSignal.timeout(22000),
       body: JSON.stringify({ model: process.env.GROQ_MODEL || "llama-3.3-70b-versatile", messages: [{ role: "system", content: system }, { role: "user", content: question }], temperature: 0.4, max_tokens: 1200 })
     });
     const payload = await response.json().catch(() => ({}));
@@ -612,6 +637,7 @@ async function assistant(account, body) {
   const response = await fetch("https://text.pollinations.ai/openai", {
     method: "POST",
     headers: { "content-type": "application/json", accept: "application/json" },
+    signal: AbortSignal.timeout(22000),
     body: JSON.stringify({ model: process.env.AI_MODEL || "openai-fast", messages: [{ role: "system", content: system }, { role: "user", content: question }], temperature: 0.4, max_tokens: 1100 })
   });
   const payload = await response.json().catch(() => ({}));
@@ -667,7 +693,7 @@ export default {
       }
       if (request.method === "POST" && path === "/api/admin/accounts") {
         const account = await requireAccount(request);
-        return send(request, { account: (await createSchoolAccount(account, await readBody(request))).account, password: "TEMPORARY_PASSWORD_NOT_AVAILABLE" });
+        return send(request, await createSchoolAccount(account, await readBody(request)));
       }
       if (request.method === "POST" && path === "/api/student/progress") {
         const account = await requireAccount(request);
