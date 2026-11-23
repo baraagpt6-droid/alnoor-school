@@ -100,7 +100,18 @@ jobs:
             TOKEN="${!TOKEN_VAR}"
             SNAPSHOT="$(curl --retry 2 --retry-delay 1 --connect-timeout 15 --max-time 30 -fsS -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{}' "$API/api/sync/pull")"
             echo "$SNAPSHOT" | jq -e '[.lessons[]? | select(.id == "E2E-DEMO-201")] | length == 1' >/dev/null
-            echo "Synced demo lesson to role: $ROLE"
+            echo "Teacher lesson synced to role: $ROLE"
+          done
+
+          ADMIN_BODY='{"changes":{"lessons":[{"id":"E2E-ADMIN-201","grade":"الصف السادس الأساسي","subject":"اختبار الإدارة","title":"درس تحقق مزامنة المشرف","description":"سجل اختبار آلي لنشر الإدارة"}]}}'
+          ADMIN_PUSH="$(curl --retry 2 --retry-delay 1 --connect-timeout 15 --max-time 30 -fsS -X POST -H "Authorization: Bearer $ALNOOR_TOKEN_admin" -H 'Content-Type: application/json' -d "$ADMIN_BODY" "$API/api/sync/push")"
+          echo "$ADMIN_PUSH" | jq -e '.ok == true and (.synchronized | index("lessons") != null)'
+          for ROLE in teacher student parent; do
+            TOKEN_VAR="ALNOOR_TOKEN_$ROLE"
+            TOKEN="${!TOKEN_VAR}"
+            SNAPSHOT="$(curl --retry 2 --retry-delay 1 --connect-timeout 15 --max-time 30 -fsS -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{}' "$API/api/sync/pull")"
+            echo "$SNAPSHOT" | jq -e '[.lessons[]? | select(.id == "E2E-ADMIN-201")] | length == 1' >/dev/null
+            echo "Admin lesson synced to role: $ROLE"
           done
 
       - name: Verify Noor Assistant API response
