@@ -738,7 +738,7 @@ export default {
     try {
       if (request.method === "GET" && (path === "/" || path === "/health" || path === "/api/health")) {
         const result = await pool.query("SELECT current_database() AS database, now() AS server_time, 1 AS healthy");
-        return send(request, { ok: true, service: "alnoor-school-api", version: "2.0.1", database: result.rows[0] });
+        return send(request, { ok: true, service: "alnoor-school-api", version: "2.0.2", database: result.rows[0] });
       }
       if (request.method === "POST" && path === "/api/bootstrap/initial-admin") {
         return send(request, await bootstrapInitialAdmin(await readBody(request)));
